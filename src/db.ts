@@ -8,7 +8,7 @@ export type ServerConfig = {
   server_mods_as_room_mods: boolean;
 };
 
-export const db = new SQL(process.env.DATABASE_URL || "sqlite://tb.sqlite");
+export const db = new SQL(process.env.DATABASE_URL || "sqlite://data.sqlite");
 
 export type VoiceTemporaryRoomAccessMode = "open" | "locked" | "hidden";
 
