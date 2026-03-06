@@ -1,0 +1,23 @@
+{
+  "private": true,
+  "scripts": {
+    "check": "tsc --noEmit",
+    "dev": "bun --hot src/index.ts",
+    "fmt": "oxfmt",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "start": "bun src/index.ts"
+  },
+  "dependencies": {
+    "@discordjs/core": "^2.4.0",
+    "@discordjs/rest": "^2.6.0",
+    "@discordjs/ws": "^2.0.4",
+    "discord-api-types": "^0.38.41"
+  },
+  "devDependencies": {
+    "bun-types": "latest",
+    "oxfmt": "^0.36.0",
+    "oxlint": "^1.51.0",
+    "typescript": "^5.9.3"
+  }
+}
