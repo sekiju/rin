@@ -1,7 +1,7 @@
 import { MessageFlags } from "discord-api-types/v10";
 import type { VoiceTemporaryRoomAccessMode } from "~/db";
 import { requireRoomMod } from "~/interactions/guards";
-import { buildRoomPermissionOverwrites, getModalComponent, replyEphemeral } from "~/interactions/helpers";
+import { buildRoomPermissionOverwrites, fetchModeratorRoleIds, getModalComponent, replyEphemeral } from "~/interactions/helpers";
 import type { InteractionCtx } from "~/interactions/router";
 
 export async function handleRoomConfigModal(ctx: InteractionCtx) {
@@ -23,19 +23,32 @@ export async function handleRoomConfigModal(ctx: InteractionCtx) {
   const channelName: string = getModalComponent(comps, "channel_name")?.value ?? "";
   const userLimitRaw: string = getModalComponent(comps, "user_limit")?.value ?? "";
   const accessMode = (getModalComponent(comps, "access_mode")?.values?.[0] ?? "open") as VoiceTemporaryRoomAccessMode;
+  const nsfw: boolean = Boolean(getModalComponent(comps, "nsfw_mode")?.value);
 
   const userLimit = Math.max(0, Math.min(99, parseInt(userLimitRaw) || 0));
 
-  // Fetch current lists from DB to rebuild permission overwrites
   const moderatorIds = (await db.getVoiceTemporaryRoomModerators(channelId)).map((m: any) => m.user_id);
   const whitelistIds = await db.getVoiceTemporaryRoomWhitelist(channelId);
   const blacklistIds = await db.getVoiceTemporaryRoomBlacklist(channelId);
 
-  const permissionOverwrites = buildRoomPermissionOverwrites(guildId, room.owner_id, accessMode, moderatorIds, whitelistIds, blacklistIds);
+  const config = await db.getConfig(guildId);
+  const moderatorRoleIds = config?.server_mods_as_room_mods ? await fetchModeratorRoleIds(api, guildId) : [];
+
+  const permissionOverwrites = buildRoomPermissionOverwrites(
+    guildId,
+    room.owner_id,
+    accessMode,
+    moderatorIds,
+    whitelistIds,
+    blacklistIds,
+    moderatorRoleIds,
+    config?.room_category_sync ?? false,
+  );
 
   await api.channels.edit(channelId, {
     name: channelName || undefined,
     user_limit: userLimit,
+    nsfw,
     permission_overwrites: permissionOverwrites,
   });
 
@@ -49,6 +62,7 @@ export async function handleRoomConfigModal(ctx: InteractionCtx) {
       `-# - Название: ${channelName}`,
       `-# - Кол-во участников: ${userLimit === 0 ? "Без ограничений" : userLimit}`,
       `-# - Доступ: ${accessModeLabel}`,
+      `-# - NSFW: ${nsfw ? "Включён" : "Выключен"}`,
     ].join("\n"),
     allowed_mentions: {},
     flags: MessageFlags.Ephemeral,

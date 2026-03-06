@@ -20,8 +20,6 @@ export async function handleRoomSettingsCommand(ctx: InteractionCtx) {
     { label: "Невидимый", value: "hidden", default: current === "hidden" },
   ];
 
-  // TODO: NSFW канал
-
   await api.interactions.createModal(i.id, i.token, {
     title: "Настройки комнаты",
     custom_id: `voice-room-config-modal:${room.channel_id}`,
@@ -62,15 +60,15 @@ export async function handleRoomSettingsCommand(ctx: InteractionCtx) {
           options: accessModeDefaults(room.access_mode),
         },
       },
-      // {
-      //   type: ComponentType.Label,
-      //   label: "NSFW-режим",
-      //   component: {
-      //     type: ComponentType.Checkbox,
-      //     custom_id: "nsfw_mode",
-      //     required: true
-      //   },
-      // },
+      {
+        type: ComponentType.Label,
+        label: "NSFW-режим",
+        component: {
+          type: ComponentType.Checkbox,
+          custom_id: "nsfw_mode",
+          default: channel?.nsfw ?? false
+        },
+      },
     ],
   });
 }

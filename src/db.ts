@@ -2,9 +2,10 @@ import { SQL } from "bun";
 
 export type ServerConfig = {
   guild_id: string;
-  // TODO: Add `room` text-part in key
-  voice_channel_id: string | null;
+  room_channel_id: string | null;
   room_name_template: string | null;
+  room_category_sync: boolean;
+  server_mods_as_room_mods: boolean;
 };
 
 export const db = new SQL(process.env.DATABASE_URL || "sqlite://tb.sqlite");
@@ -23,86 +24,104 @@ export type VoiceTemporaryRoomModerator = {
   user_id: string;
 };
 
+const MIGRATIONS: { id: number; sql: string }[] = [
+  {
+    id: 1,
+    sql: `
+      CREATE TABLE IF NOT EXISTS migration_version (
+        version INTEGER NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS server_configs (
+        guild_id TEXT PRIMARY KEY,
+        room_channel_id TEXT,
+        room_name_template TEXT,
+        room_category_sync INTEGER NOT NULL DEFAULT 0,
+        server_mods_as_room_mods INTEGER NOT NULL DEFAULT 0
+      );
+      CREATE TABLE IF NOT EXISTS server_config_categories (
+        guild_id TEXT NOT NULL,
+        category_id TEXT NOT NULL,
+        position INTEGER NOT NULL,
+        PRIMARY KEY(guild_id, category_id)
+      );
+      CREATE TABLE IF NOT EXISTS voice_temporary_rooms (
+        channel_id TEXT PRIMARY KEY,
+        guild_id TEXT NOT NULL,
+        owner_id TEXT NOT NULL,
+        access_mode TEXT NOT NULL DEFAULT 'open'
+      );
+      CREATE TABLE IF NOT EXISTS voice_temporary_room_whitelist (
+        channel_id TEXT NOT NULL,
+        user_id TEXT NOT NULL,
+        PRIMARY KEY(channel_id, user_id),
+        FOREIGN KEY(channel_id) REFERENCES voice_temporary_rooms(channel_id) ON DELETE CASCADE
+      );
+      CREATE TABLE IF NOT EXISTS voice_temporary_room_blacklist (
+        channel_id TEXT NOT NULL,
+        user_id TEXT NOT NULL,
+        PRIMARY KEY(channel_id, user_id),
+        FOREIGN KEY(channel_id) REFERENCES voice_temporary_rooms(channel_id) ON DELETE CASCADE
+      );
+      CREATE TABLE IF NOT EXISTS voice_temporary_room_members (
+        channel_id TEXT NOT NULL,
+        user_id TEXT NOT NULL,
+        guild_id TEXT NOT NULL,
+        PRIMARY KEY(channel_id, user_id),
+        FOREIGN KEY(channel_id) REFERENCES voice_temporary_rooms(channel_id) ON DELETE CASCADE
+      );
+      CREATE TABLE IF NOT EXISTS voice_temporary_room_moderators (
+        channel_id TEXT NOT NULL,
+        user_id TEXT NOT NULL,
+        PRIMARY KEY(channel_id, user_id),
+        FOREIGN KEY(channel_id) REFERENCES voice_temporary_rooms(channel_id) ON DELETE CASCADE
+      );
+    `,
+  },
+];
+
+async function runMigrations() {
+  await db.unsafe(`
+    CREATE TABLE IF NOT EXISTS _migrations (
+      id INTEGER PRIMARY KEY,
+      applied_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+  const applied = new Set(
+    (await db<{ id: number }[]>`SELECT id FROM _migrations`).map((r) => r.id),
+  );
+  for (const migration of MIGRATIONS) {
+    if (applied.has(migration.id)) continue;
+    await db.unsafe(migration.sql).catch(() => {});
+    await db`INSERT INTO _migrations (id) VALUES (${migration.id})`;
+  }
+}
+
 export async function initDb() {
   await db.unsafe("PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000;").catch(() => {});
-  await db`
-    CREATE TABLE IF NOT EXISTS server_configs (
-      guild_id TEXT PRIMARY KEY,
-      voice_channel_id TEXT,
-      room_name_template TEXT
-    );
-  `;
-  // Migration: add column to pre-existing databases that lack it
-  await db.unsafe("ALTER TABLE server_configs ADD COLUMN room_name_template TEXT").catch(() => {});
-  await db`
-    CREATE TABLE IF NOT EXISTS server_config_categories (
-      guild_id TEXT NOT NULL,
-      category_id TEXT NOT NULL,
-      position INTEGER NOT NULL,
-      PRIMARY KEY(guild_id, category_id)
-    );
-  `;
-  await db`
-    CREATE TABLE IF NOT EXISTS voice_temporary_rooms (
-      channel_id TEXT PRIMARY KEY,
-      guild_id TEXT NOT NULL,
-      owner_id TEXT NOT NULL,
-      access_mode TEXT NOT NULL DEFAULT 'open'
-    );
-  `;
-  await db.unsafe("ALTER TABLE voice_temporary_rooms ADD COLUMN access_mode TEXT NOT NULL DEFAULT 'open'").catch(() => {});
-  await db`
-    CREATE TABLE IF NOT EXISTS voice_temporary_room_whitelist (
-      channel_id TEXT NOT NULL,
-      user_id TEXT NOT NULL,
-      PRIMARY KEY(channel_id, user_id),
-      FOREIGN KEY(channel_id) REFERENCES voice_temporary_rooms(channel_id) ON DELETE CASCADE
-    );
-  `;
-  await db`
-    CREATE TABLE IF NOT EXISTS voice_temporary_room_blacklist (
-      channel_id TEXT NOT NULL,
-      user_id TEXT NOT NULL,
-      PRIMARY KEY(channel_id, user_id),
-      FOREIGN KEY(channel_id) REFERENCES voice_temporary_rooms(channel_id) ON DELETE CASCADE
-    );
-  `;
-  await db`
-    CREATE TABLE IF NOT EXISTS voice_temporary_room_members (
-      channel_id TEXT NOT NULL,
-      user_id TEXT NOT NULL,
-      guild_id TEXT NOT NULL,
-      PRIMARY KEY(channel_id, user_id),
-      FOREIGN KEY(channel_id) REFERENCES voice_temporary_rooms(channel_id) ON DELETE CASCADE
-    );
-  `;
-  await db`
-    CREATE TABLE IF NOT EXISTS voice_temporary_room_moderators (
-      channel_id TEXT NOT NULL,
-      user_id TEXT NOT NULL,
-      PRIMARY KEY(channel_id, user_id),
-      FOREIGN KEY(channel_id) REFERENCES voice_temporary_rooms(channel_id) ON DELETE CASCADE
-    );
-  `;
+  await runMigrations();
 }
 
 export async function getConfig(guildId: string): Promise<ServerConfig | null> {
-  const [row] = await db<ServerConfig[]>`SELECT * FROM server_configs WHERE guild_id = ${guildId}`;
+  const [row] = await db<any[]>`SELECT * FROM server_configs WHERE guild_id = ${guildId}`;
   if (!row) return null;
   return {
     guild_id: row.guild_id,
-    voice_channel_id: row.voice_channel_id,
+    room_channel_id: row.room_channel_id,
     room_name_template: row.room_name_template,
+    room_category_sync: Boolean(row.room_category_sync),
+    server_mods_as_room_mods: Boolean(row.server_mods_as_room_mods),
   };
 }
 
 export async function setConfig(config: ServerConfig) {
   await db`
-    INSERT INTO server_configs (guild_id, voice_channel_id, room_name_template)
-    VALUES (${config.guild_id}, ${config.voice_channel_id}, ${config.room_name_template})
+    INSERT INTO server_configs (guild_id, room_channel_id, room_name_template, room_category_sync, server_mods_as_room_mods)
+    VALUES (${config.guild_id}, ${config.room_channel_id}, ${config.room_name_template}, ${config.room_category_sync ? 1 : 0}, ${config.server_mods_as_room_mods ? 1 : 0})
     ON CONFLICT(guild_id) DO UPDATE SET
-        voice_channel_id=excluded.voice_channel_id,
-        room_name_template=excluded.room_name_template
+        room_channel_id=excluded.room_channel_id,
+        room_name_template=excluded.room_name_template,
+        room_category_sync=excluded.room_category_sync,
+        server_mods_as_room_mods=excluded.server_mods_as_room_mods
   `;
 }
 

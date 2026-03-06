@@ -41,6 +41,18 @@ export class InteractionRouter {
     return this;
   }
 
+  subcommandGroup(command: string, group: string, sub: string, fn: HandlerFn): this {
+    this.routes.push({
+      match: (i) =>
+        i.type === InteractionType.ApplicationCommand &&
+        (i.data as any).name === command &&
+        (i.data as any).options?.[0]?.name === group &&
+        (i.data as any).options?.[0]?.options?.[0]?.name === sub,
+      handle: fn,
+    });
+    return this;
+  }
+
   modal(pattern: string | RegExp, fn: HandlerFn): this {
     this.routes.push({
       match: (i) => {

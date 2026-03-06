@@ -1,6 +1,6 @@
 import { MessageFlags } from "discord-api-types/v10";
 import { requireRoomMod } from "~/interactions/guards";
-import { buildRoomPermissionOverwrites, getModalComponent, replyEphemeral } from "~/interactions/helpers";
+import { buildRoomPermissionOverwrites, fetchModeratorRoleIds, getModalComponent, replyEphemeral } from "~/interactions/helpers";
 import type { InteractionCtx } from "~/interactions/router";
 
 export async function handleRoomMembersModal(ctx: InteractionCtx) {
@@ -23,9 +23,38 @@ export async function handleRoomMembersModal(ctx: InteractionCtx) {
   const whitelistIds: string[] = getModalComponent(comps, "user_whitelist")?.values ?? [];
   const blacklistIds: string[] = getModalComponent(comps, "user_blacklist")?.values ?? [];
 
-  const permissionOverwrites = buildRoomPermissionOverwrites(guildId, room.owner_id, room.access_mode, moderatorIds, whitelistIds, blacklistIds);
+  const listByUser = new Map<string, string>();
+  const conflicts: string[] = [];
+  for (const [listName, ids] of [["Модераторы", moderatorIds], ["Белый список", whitelistIds], ["Чёрный список", blacklistIds]] as const) {
+    for (const id of ids) {
+      if (listByUser.has(id)) {
+        conflicts.push(`<@${id}> (${listByUser.get(id)} и ${listName})`);
+      } else {
+        listByUser.set(id, listName);
+      }
+    }
+  }
+  if (conflicts.length > 0) {
+    await replyEphemeral(
+      ctx,
+      `Участник не может быть в нескольких списках одновременно:\n${conflicts.map((c) => `-# ${c}`).join("\n")}`,
+    );
+    return;
+  }
 
-  // TODO: Нужна проверка чтобы один пользователь не был в нескольких списках.
+  const config = await db.getConfig(guildId);
+  const moderatorRoleIds = config?.server_mods_as_room_mods ? await fetchModeratorRoleIds(api, guildId) : [];
+
+  const permissionOverwrites = buildRoomPermissionOverwrites(
+    guildId,
+    room.owner_id,
+    room.access_mode,
+    moderatorIds,
+    whitelistIds,
+    blacklistIds,
+    moderatorRoleIds,
+    config?.room_category_sync ?? false,
+  );
 
   await api.channels.edit(channelId, { permission_overwrites: permissionOverwrites });
 

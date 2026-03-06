@@ -1,4 +1,4 @@
-import { ComponentType, SelectMenuDefaultValueType } from "discord-api-types/v10";
+import { APISelectMenuDefaultValue, ComponentType, SelectMenuDefaultValueType } from "discord-api-types/v10";
 import { requireRoom, requireRoomMod } from "~/interactions/guards";
 import type { InteractionCtx } from "~/interactions/router";
 
@@ -15,7 +15,7 @@ export async function handleRoomMembersCommand(ctx: InteractionCtx) {
   const whitelist = await db.getVoiceTemporaryRoomWhitelist(room.channel_id);
   const blacklist = await db.getVoiceTemporaryRoomBlacklist(room.channel_id);
 
-  const toDefaultUsers = (ids: string[]) => ids.map((id) => ({ id, type: SelectMenuDefaultValueType.User }));
+  const toDefaultUsers = (ids: string[]) => ids.map((id) => ({ id, type: SelectMenuDefaultValueType.User } satisfies APISelectMenuDefaultValue<SelectMenuDefaultValueType.User>));
 
   await api.interactions.createModal(i.id, i.token, {
     title: "Участники комнаты",

@@ -1,16 +1,15 @@
 import { ChannelType, ComponentType, SelectMenuDefaultValueType, TextInputStyle } from "discord-api-types/v10";
 import type { InteractionCtx } from "~/interactions/router";
 
-export async function handleSettingsCommand(ctx: InteractionCtx) {
+export async function handleServerSettingsRoomCommand(ctx: InteractionCtx) {
   const { interaction, guildId, api, db } = ctx;
   const i = interaction as any;
 
   let config = await db.getConfig(guildId);
-  config ||= { guild_id: guildId, voice_channel_id: null, room_name_template: null };
+  config ||= { guild_id: guildId, room_channel_id: null, room_name_template: null, room_category_sync: false, server_mods_as_room_mods: false };
 
   const categoryIds = await db.getServerConfigCategories(guildId);
 
-  // TODO: Нужно добавить опции: синхронизация с категорией + модерация сервера дискорд
   await api.interactions.createModal(i.id, i.token, {
     title: "Настройки сервера",
     custom_id: "server-config-modal",
@@ -25,8 +24,8 @@ export async function handleSettingsCommand(ctx: InteractionCtx) {
           min_values: 0,
           max_values: 1,
           channel_types: [ChannelType.GuildVoice],
-          default_values: config.voice_channel_id
-            ? [{ id: config.voice_channel_id, type: SelectMenuDefaultValueType.Channel }]
+          default_values: config.room_channel_id
+            ? [{ id: config.room_channel_id, type: SelectMenuDefaultValueType.Channel }]
             : [],
           required: false,
         },
@@ -56,6 +55,26 @@ export async function handleSettingsCommand(ctx: InteractionCtx) {
           ...(config.room_name_template ? { value: config.room_name_template } : {}),
           required: false,
           max_length: 100,
+        },
+      },
+      {
+        type: ComponentType.Label,
+        label: "Синхронизация с категорией",
+        description: "Комнаты наследуют права доступа из родительской категории",
+        component: {
+          type: ComponentType.Checkbox,
+          custom_id: "room_category_sync",
+          default: config.room_category_sync,
+        },
+      },
+      {
+        type: ComponentType.Label,
+        label: "Модераторы сервера — модераторы комнат",
+        description: "Роли с правами ManageChannels/MoveMembers получают доступ ко всем комнатам",
+        component: {
+          type: ComponentType.Checkbox,
+          custom_id: "server_mods_as_room_mods",
+          default: config.server_mods_as_room_mods,
         },
       },
     ],

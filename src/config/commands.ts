@@ -9,13 +9,27 @@ import {
 
 export const applicationCommands = [
   {
-    name: "settings", // TODO: Вынести в /server settings room
-    description: "Настройки голосовых каналов на сервере",
+    name: "server",
+    description: "Управление сервером",
     type: ApplicationCommandType.ChatInput,
-    options: [],
     default_member_permissions: PermissionFlagsBits.Administrator.toString(),
     integration_types: [ApplicationIntegrationType.GuildInstall],
     contexts: [InteractionContextType.Guild],
+    options: [
+      {
+        name: "settings",
+        description: "Настройки сервера",
+        type: ApplicationCommandOptionType.SubcommandGroup,
+        options: [
+          {
+            name: "room",
+            description: "Настройки голосовых комнат",
+            type: ApplicationCommandOptionType.Subcommand,
+            options: [],
+          },
+        ],
+      },
+    ],
   },
   {
     name: "room",
@@ -26,13 +40,11 @@ export const applicationCommands = [
         name: "settings",
         description: "Настройки текущей голосовой комнаты",
         type: ApplicationCommandOptionType.Subcommand,
-        options: [],
       },
       {
         name: "members",
         description: "Управление списками участников комнаты",
         type: ApplicationCommandOptionType.Subcommand,
-        options: [],
       },
       {
         name: "kick",
