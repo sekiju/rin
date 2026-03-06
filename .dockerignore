@@ -1,0 +1,8 @@
+node_modules
+.idea
+*.env*
+*.sqlite
+.git
+.github
+.dockerignore
+Dockerfile
