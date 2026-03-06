@@ -25,7 +25,11 @@ export async function handleRoomMembersModal(ctx: InteractionCtx) {
 
   const listByUser = new Map<string, string>();
   const conflicts: string[] = [];
-  for (const [listName, ids] of [["Модераторы", moderatorIds], ["Белый список", whitelistIds], ["Чёрный список", blacklistIds]] as const) {
+  for (const [listName, ids] of [
+    ["Модераторы", moderatorIds],
+    ["Белый список", whitelistIds],
+    ["Чёрный список", blacklistIds],
+  ] as const) {
     for (const id of ids) {
       if (listByUser.has(id)) {
         conflicts.push(`<@${id}> (${listByUser.get(id)} и ${listName})`);
@@ -35,10 +39,7 @@ export async function handleRoomMembersModal(ctx: InteractionCtx) {
     }
   }
   if (conflicts.length > 0) {
-    await replyEphemeral(
-      ctx,
-      `Участник не может быть в нескольких списках одновременно:\n${conflicts.map((c) => `-# ${c}`).join("\n")}`,
-    );
+    await replyEphemeral(ctx, `Участник не может быть в нескольких списках одновременно:\n${conflicts.map((c) => `-# ${c}`).join("\n")}`);
     return;
   }
 

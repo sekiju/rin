@@ -86,9 +86,7 @@ async function runMigrations() {
       applied_at TEXT NOT NULL DEFAULT (datetime('now'))
     )
   `);
-  const applied = new Set(
-    (await db<{ id: number }[]>`SELECT id FROM _migrations`).map((r) => r.id),
-  );
+  const applied = new Set((await db<{ id: number }[]>`SELECT id FROM _migrations`).map((r) => r.id));
   for (const migration of MIGRATIONS) {
     if (applied.has(migration.id)) continue;
     await db.unsafe(migration.sql).catch(() => {});

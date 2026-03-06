@@ -46,11 +46,11 @@ const handler: EventHandler<GatewayDispatchEvents.VoiceStateUpdate, "db"> = {
       const targetParentId = await resolveTargetCategory(api, guildId, config.room_channel_id, db);
 
       const categoryOverwrites =
-          config.room_category_sync && targetParentId
-              ? ((await api.channels.get(targetParentId).catch(() => null)) as any)?.permission_overwrites ?? []
-              : [];
+        config.room_category_sync && targetParentId
+          ? (((await api.channels.get(targetParentId).catch(() => null)) as any)?.permission_overwrites ?? [])
+          : [];
 
-      const superUserPerms = (PermissionFlagsBits.Connect | PermissionFlagsBits.ViewChannel).toString()
+      const superUserPerms = (PermissionFlagsBits.Connect | PermissionFlagsBits.ViewChannel).toString();
 
       const moderatorRoleIds = config.server_mods_as_room_mods ? await fetchModeratorRoleIds(api, guildId) : [];
       const modRoleOverwrites = moderatorRoleIds.map((id) => ({
@@ -64,11 +64,7 @@ const handler: EventHandler<GatewayDispatchEvents.VoiceStateUpdate, "db"> = {
         name: roomName,
         type: ChannelType.GuildVoice,
         ...(targetParentId ? { parent_id: targetParentId } : {}),
-        permission_overwrites: [
-          ...categoryOverwrites,
-          ...modRoleOverwrites,
-          { id: userId, type: 1, allow: superUserPerms, deny: "0" },
-        ],
+        permission_overwrites: [...categoryOverwrites, ...modRoleOverwrites, { id: userId, type: 1, allow: superUserPerms, deny: "0" }],
       });
 
       await db.createVoiceTemporaryRoom({
@@ -95,12 +91,7 @@ const handler: EventHandler<GatewayDispatchEvents.VoiceStateUpdate, "db"> = {
  * 1. Configured categories (in order) — skips full ones (≥ DISCORD_CATEGORY_LIMIT channels)
  * 2. Falls back to the creation channel's own category if no categories configured
  */
-async function resolveTargetCategory(
-  api: any,
-  guildId: string,
-  creationChannelId: string,
-  db: any,
-): Promise<string | null | undefined> {
+async function resolveTargetCategory(api: any, guildId: string, creationChannelId: string, db: any): Promise<string | null | undefined> {
   const categoryIds: string[] = await db.getServerConfigCategories(guildId);
 
   if (categoryIds.length > 0) {

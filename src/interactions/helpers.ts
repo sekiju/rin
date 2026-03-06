@@ -22,9 +22,7 @@ export function getModalComponent(components: any[], customId: string): any {
 export async function fetchModeratorRoleIds(api: InteractionCtx["api"], guildId: string): Promise<string[]> {
   const modPerms = PermissionFlagsBits.ManageChannels | PermissionFlagsBits.MoveMembers;
   const roles = await (api as any).guilds.getRoles(guildId).catch(() => []);
-  return (roles as any[])
-    .filter((r) => r.id !== guildId && (BigInt(r.permissions) & modPerms) !== 0n)
-    .map((r) => r.id);
+  return (roles as any[]).filter((r) => r.id !== guildId && (BigInt(r.permissions) & modPerms) !== 0n).map((r) => r.id);
 }
 
 export function buildRoomPermissionOverwrites(

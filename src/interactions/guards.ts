@@ -11,13 +11,8 @@ export async function requireRoom(ctx: InteractionCtx): Promise<VoiceTemporaryRo
   return room;
 }
 
-export async function requireRoomMod(
-  ctx: InteractionCtx,
-  room: Pick<VoiceTemporaryRoom, "owner_id" | "channel_id">,
-): Promise<boolean> {
-  const isMod =
-    room.owner_id === ctx.invokerId ||
-    (await ctx.db.isVoiceTemporaryRoomModerator(room.channel_id, ctx.invokerId));
+export async function requireRoomMod(ctx: InteractionCtx, room: Pick<VoiceTemporaryRoom, "owner_id" | "channel_id">): Promise<boolean> {
+  const isMod = room.owner_id === ctx.invokerId || (await ctx.db.isVoiceTemporaryRoomModerator(room.channel_id, ctx.invokerId));
   if (!isMod) {
     await replyEphemeral(ctx, "Вы не являетесь владельцем или модератором этой комнаты.");
     return false;

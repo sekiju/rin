@@ -32,7 +32,7 @@ export async function handleServerConfigModal(ctx: InteractionCtx) {
     return;
   }
 
-  await db.setConfig({ ...(prevConfig || {}), ...newConfig });
+  await db.setConfig({ ...prevConfig, ...newConfig });
   await db.setServerConfigCategories(guildId, newCategoryIds);
 
   const categoriesText = newCategoryIds.length > 0 ? newCategoryIds.map((id) => `<#${id}>`).join(", ") : "*(Не заданы)*";

@@ -6,7 +6,13 @@ export async function handleServerSettingsRoomCommand(ctx: InteractionCtx) {
   const i = interaction as any;
 
   let config = await db.getConfig(guildId);
-  config ||= { guild_id: guildId, room_channel_id: null, room_name_template: null, room_category_sync: false, server_mods_as_room_mods: false };
+  config ||= {
+    guild_id: guildId,
+    room_channel_id: null,
+    room_name_template: null,
+    room_category_sync: false,
+    server_mods_as_room_mods: false,
+  };
 
   const categoryIds = await db.getServerConfigCategories(guildId);
 
@@ -24,9 +30,7 @@ export async function handleServerSettingsRoomCommand(ctx: InteractionCtx) {
           min_values: 0,
           max_values: 1,
           channel_types: [ChannelType.GuildVoice],
-          default_values: config.room_channel_id
-            ? [{ id: config.room_channel_id, type: SelectMenuDefaultValueType.Channel }]
-            : [],
+          default_values: config.room_channel_id ? [{ id: config.room_channel_id, type: SelectMenuDefaultValueType.Channel }] : [],
           required: false,
         },
       },

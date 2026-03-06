@@ -66,7 +66,7 @@ export async function handleRoomSettingsCommand(ctx: InteractionCtx) {
         component: {
           type: ComponentType.Checkbox,
           custom_id: "nsfw_mode",
-          default: channel?.nsfw ?? false
+          default: channel?.nsfw ?? false,
         },
       },
     ],

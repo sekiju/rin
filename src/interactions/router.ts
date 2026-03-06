@@ -33,9 +33,7 @@ export class InteractionRouter {
   subcommand(command: string, sub: string, fn: HandlerFn): this {
     this.routes.push({
       match: (i) =>
-        i.type === InteractionType.ApplicationCommand &&
-        (i.data as any).name === command &&
-        (i.data as any).options?.[0]?.name === sub,
+        i.type === InteractionType.ApplicationCommand && (i.data as any).name === command && (i.data as any).options?.[0]?.name === sub,
       handle: fn,
     });
     return this;
