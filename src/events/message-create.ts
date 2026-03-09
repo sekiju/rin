@@ -26,7 +26,7 @@ const handler: EventHandler<GatewayDispatchEvents.MessageCreate, "db"> = {
     if (message.author.bot || !message.guild_id || !message.content) return;
 
     const config = db.serverConfigs.get(message.guild_id);
-    if (!(config?.experiments && (config.experiments & ExperimentFlags.RussianKeyboardLayoutFix))) return;
+    if (!(config?.experiments && config.experiments & ExperimentFlags.RussianKeyboardLayoutFix)) return;
 
     if (isProbablyWrongLayout(message.content)) {
       await api.channels.createMessage(message.channel_id, {

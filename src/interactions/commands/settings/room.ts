@@ -1,9 +1,4 @@
-import {
-  APILabelComponent,
-  ChannelType,
-  ComponentType,
-  TextInputStyle
-} from "discord-api-types/v10";
+import { APILabelComponent, ChannelType, ComponentType, TextInputStyle } from "discord-api-types/v10";
 import type { CommandCtx } from "~/interactions/router";
 import { createComponents } from "~/utils/modal";
 
@@ -62,7 +57,7 @@ export const ROOM_MODAL_COMPONENTS = [
       type: ComponentType.Checkbox,
       custom_id: "categoryPermissionSync",
     },
-  }
+  },
 ] as const satisfies readonly APILabelComponent[];
 
 export async function handleServerSettingsRoomCommand(ctx: CommandCtx) {

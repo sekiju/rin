@@ -18,10 +18,7 @@ export async function handleServerExperimentsConfigModal(ctx: ModalCtx) {
   await db.serverConfigs.put(guildId, { ...prevConfig, experiments });
 
   await api.interactions.reply(interaction.id, interaction.token, {
-    content: [
-      "Настройки экспериментов обновлены",
-      `-# - Авто-исправление раскладки: ${enabled ? "Включено" : "Выключено"}`,
-    ].join("\n"),
+    content: ["Настройки экспериментов обновлены", `-# - Авто-исправление раскладки: ${enabled ? "Включено" : "Выключено"}`].join("\n"),
     allowed_mentions: {},
     flags: MessageFlags.Ephemeral,
   });

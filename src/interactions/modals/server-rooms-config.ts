@@ -31,7 +31,14 @@ export async function handleServerRoomsConfigModal(ctx: ModalCtx) {
 
   await db.serverConfigs.put(guildId, {
     ...prevConfig,
-    voice: { ...prevConfig.voice, enabled: parsed.enabled, triggerChannelId, nameTemplate, categories: parsed.categories, categoryPermissionSync: parsed.categoryPermissionSync },
+    voice: {
+      ...prevConfig.voice,
+      enabled: parsed.enabled,
+      triggerChannelId,
+      nameTemplate,
+      categories: parsed.categories,
+      categoryPermissionSync: parsed.categoryPermissionSync,
+    },
   });
 
   const categoriesText = parsed.categories.length ? parsed.categories.map((id) => `<#${id}>`).join(", ") : "*(Не заданы)*";

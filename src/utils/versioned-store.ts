@@ -12,7 +12,7 @@ interface StoreOptions<T> {
   name: string;
   version: number;
   migrations: Record<number, Migration<T>>;
-  default: T
+  default: T;
 }
 
 export class VersionedStore<T> {

@@ -9,7 +9,7 @@ const SQLITE_MIGRATION_KEY = "_sqlite_migration_done";
 
 export enum ExperimentFlags {
   None = 0,
-  RussianKeyboardLayoutFix =  1 << 0,
+  RussianKeyboardLayoutFix = 1 << 0,
 }
 
 export interface ServerConfig {
@@ -28,7 +28,10 @@ export const serverConfigs = new VersionedStore<ServerConfig>({
   name: "server-configs",
   version: 1,
   migrations: {},
-  default: { voice: { enabled: false, triggerChannelId: null, nameTemplate: "{username}", categories: [], categoryPermissionSync: false }, experiments: 0 },
+  default: {
+    voice: { enabled: false, triggerChannelId: null, nameTemplate: "{username}", categories: [], categoryPermissionSync: false },
+    experiments: 0,
+  },
 });
 
 export enum VoiceTemporaryRoomAccessMode {
@@ -56,7 +59,15 @@ export const voiceTemporaryRooms = new VersionedStore<VoiceTemporaryRoom>({
   name: "voice-temporary-rooms",
   version: 1,
   migrations: {},
-  default: { guildId: "", ownerId: "", accessMode: VoiceTemporaryRoomAccessMode.Open, members: [], whitelist: [], blacklist: [], moderators: [] },
+  default: {
+    guildId: "",
+    ownerId: "",
+    accessMode: VoiceTemporaryRoomAccessMode.Open,
+    members: [],
+    whitelist: [],
+    blacklist: [],
+    moderators: [],
+  },
 });
 
 // ---------------------------------------------------------------------------
@@ -108,15 +119,15 @@ async function migrateFromSqlite(): Promise<void> {
           categories: categoriesByGuild.get(row.guild_id) ?? [],
           categoryPermissionSync: Boolean(row.room_category_sync),
         },
-        experiments: (row.experiment_keyboard_layout_fix ? ExperimentFlags.RussianKeyboardLayoutFix : 0),
+        experiments: row.experiment_keyboard_layout_fix ? ExperimentFlags.RussianKeyboardLayoutFix : 0,
       });
     }
 
     const accessModeMapper: Record<string, VoiceTemporaryRoomAccessMode> = {
-      "open": VoiceTemporaryRoomAccessMode.Open,
-      "locked": VoiceTemporaryRoomAccessMode.Locked,
-      "hidden": VoiceTemporaryRoomAccessMode.Hidden,
-    }
+      open: VoiceTemporaryRoomAccessMode.Open,
+      locked: VoiceTemporaryRoomAccessMode.Locked,
+      hidden: VoiceTemporaryRoomAccessMode.Hidden,
+    };
 
     for (const room of rooms) {
       await voiceTemporaryRooms.put(room.channel_id, {

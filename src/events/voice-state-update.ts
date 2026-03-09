@@ -61,22 +61,22 @@ const handler: EventHandler<GatewayDispatchEvents.VoiceStateUpdate, "db"> = {
           type: 1,
           allow: (PermissionFlagsBits.Connect | PermissionFlagsBits.ViewChannel).toString(),
           deny: "0",
-        }
-      ]
+        },
+      ];
 
       const newChannel = await api.guilds.createChannel(guildId, {
         name: roomName,
         type: ChannelType.GuildVoice,
-        ...(targetParentId ? { parent_id: targetParentId } : { permission_overwrites: initialPermissions })
+        ...(targetParentId ? { parent_id: targetParentId } : { permission_overwrites: initialPermissions }),
       });
 
       if (targetParentId) {
         const allChannels = await api.guilds.getChannels(guildId).catch(() => []);
-        const category = allChannels.find(ch => ch.id === targetParentId);
+        const category = allChannels.find((ch) => ch.id === targetParentId);
 
         if (category && category.permission_overwrites) {
           await api.channels.edit(newChannel.id, {
-            permission_overwrites: [...category.permission_overwrites, ...initialPermissions]
+            permission_overwrites: [...category.permission_overwrites, ...initialPermissions],
           });
         }
       }
@@ -108,7 +108,12 @@ const handler: EventHandler<GatewayDispatchEvents.VoiceStateUpdate, "db"> = {
  * 1. Configured categories (in order) — skips full ones (≥ DISCORD_CATEGORY_LIMIT channels)
  * 2. Falls back to the creation channel's own category if no categories configured
  */
-async function resolveTargetCategory(api: any, guildId: string, creationChannelId: string, categoryIds: string[]): Promise<string | null | undefined> {
+async function resolveTargetCategory(
+  api: any,
+  guildId: string,
+  creationChannelId: string,
+  categoryIds: string[],
+): Promise<string | null | undefined> {
   const allChannels = await api.guilds.getChannels(guildId).catch(() => []);
 
   if (categoryIds.length > 0) {
@@ -129,7 +134,7 @@ async function resolveTargetCategory(api: any, guildId: string, creationChannelI
     return categoryIds.at(-1);
   }
 
-  const creationChannel = allChannels.find(ch => ch.id === creationChannelId);
+  const creationChannel = allChannels.find((ch) => ch.id === creationChannelId);
   return creationChannel?.parent_id;
 }
 
