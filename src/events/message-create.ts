@@ -1,5 +1,6 @@
 import { EventHandler } from "~/core/types";
 import { GatewayDispatchEvents } from "discord-api-types/v10";
+import { ExperimentFlags } from "~/db";
 
 const EN_CHARS = " `qwertyuiop[]asdfghjkl;'zxcvbnm,./QWERTYUIOP{}ASDFGHJKL:\"ZXCVBNM<>?~";
 const RU_CHARS = " ёйцукенгшщзхъфывапролджэячсмитьбю.ЙЦУКЕНГШЩЗХЪФЫВАПРОЛДЖЭЯЧСМИТЬБЮ,Ё";
@@ -25,7 +26,7 @@ const handler: EventHandler<GatewayDispatchEvents.MessageCreate, "db"> = {
     if (message.author.bot || !message.guild_id || !message.content) return;
 
     const config = db.serverConfigs.get(message.guild_id);
-    if (!config?.experiment_keyboard_layout_fix) return;
+    if (!(config?.experiments && (config.experiments & ExperimentFlags.RussianKeyboardLayoutFix))) return;
 
     if (isProbablyWrongLayout(message.content)) {
       await api.channels.createMessage(message.channel_id, {

@@ -6,8 +6,9 @@ export async function handleRoomMembersCommand(ctx: InteractionCtx) {
   const { interaction, api } = ctx;
   const i = interaction as any;
 
-  const room = await requireRoom(ctx);
-  if (!room) return;
+  const found = await requireRoom(ctx);
+  if (!found) return;
+  const { channelId, room } = found;
 
   if (!(await requireRoomMod(ctx, room))) return;
 
@@ -20,7 +21,7 @@ export async function handleRoomMembersCommand(ctx: InteractionCtx) {
 
   await api.interactions.createModal(i.id, i.token, {
     title: "Участники комнаты",
-    custom_id: `voice-room-members-modal:${room.channel_id}`,
+    custom_id: `voice-room-members-modal:${channelId}`,
     components: [
       {
         type: ComponentType.Label,

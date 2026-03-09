@@ -43,8 +43,8 @@ export async function handleRoomMembersModal(ctx: InteractionCtx) {
     return;
   }
 
-  const config = db.serverConfigs.get(guildId);
-  const moderatorRoleIds = config?.server_mods_as_room_mods ? await fetchModeratorRoleIds(api, guildId) : [];
+  const config = db.serverConfigs.get(guildId, true);
+  const moderatorRoleIds = config.voice.promoteServerMods ? await fetchModeratorRoleIds(api, guildId) : [];
 
   const permissionOverwrites = buildRoomPermissionOverwrites(
     guildId,
@@ -54,7 +54,7 @@ export async function handleRoomMembersModal(ctx: InteractionCtx) {
     whitelistIds,
     blacklistIds,
     moderatorRoleIds,
-    config?.room_category_sync ?? false,
+    config.voice.categoryPermissionSync,
   );
 
   await api.channels.edit(channelId, { permission_overwrites: permissionOverwrites });

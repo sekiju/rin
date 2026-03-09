@@ -1,5 +1,4 @@
 import { MessageFlags } from "discord-api-types/v10";
-import type { VoiceTemporaryRoom } from "~/db";
 import { requireRoom, requireRoomMod } from "~/interactions/guards";
 import { replyEphemeral } from "~/interactions/helpers";
 import type { InteractionCtx } from "~/interactions/router";
@@ -11,8 +10,9 @@ export async function handleRoomKickCommand(ctx: InteractionCtx) {
   const targetUserId = i.data?.options?.[0]?.options?.[0]?.value as string | undefined;
   if (!targetUserId) return;
 
-  const room = await requireRoom(ctx);
-  if (!room) return;
+  const found = await requireRoom(ctx);
+  if (!found) return;
+  const { channelId: roomChannelId, room } = found;
 
   if (!(await requireRoomMod(ctx, room))) return;
 
@@ -26,14 +26,14 @@ export async function handleRoomKickCommand(ctx: InteractionCtx) {
     return;
   }
 
-  let targetRoom: VoiceTemporaryRoom | null = null;
-  for (const [, r] of db.voiceTemporaryRooms.entries()) {
+  let targetChannelId: string | null = null;
+  for (const [channelId, r] of db.voiceTemporaryRooms.entries()) {
     if (r.guildId === guildId && r.members.includes(targetUserId)) {
-      targetRoom = r;
+      targetChannelId = channelId;
       break;
     }
   }
-  if (targetRoom?.channel_id !== room.channel_id) {
+  if (targetChannelId !== roomChannelId) {
     await replyEphemeral(ctx, "Этот участник не находится в вашей комнате.");
     return;
   }

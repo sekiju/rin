@@ -1,5 +1,5 @@
 import { ComponentType, TextInputStyle } from "discord-api-types/v10";
-import type { VoiceTemporaryRoomAccessMode } from "~/db";
+import { VoiceTemporaryRoomAccessMode } from "~/db";
 import { requireRoom, requireRoomMod } from "~/interactions/guards";
 import type { InteractionCtx } from "~/interactions/router";
 
@@ -7,22 +7,23 @@ export async function handleRoomSettingsCommand(ctx: InteractionCtx) {
   const { interaction, api } = ctx;
   const i = interaction as any;
 
-  const room = await requireRoom(ctx);
-  if (!room) return;
+  const found = await requireRoom(ctx);
+  if (!found) return;
+  const { channelId, room } = found;
 
   if (!(await requireRoomMod(ctx, room))) return;
 
-  const channel = (await api.channels.get(room.channel_id).catch(() => null)) as any;
+  const channel = (await api.channels.get(channelId).catch(() => null)) as any;
 
   const accessModeDefaults = (current: VoiceTemporaryRoomAccessMode) => [
-    { label: "Открытый", value: "open", default: current === "open" },
-    { label: "Закрытый", value: "locked", default: current === "locked" },
-    { label: "Невидимый", value: "hidden", default: current === "hidden" },
+    { label: "Открытый", value: "open", default: current === VoiceTemporaryRoomAccessMode.Open },
+    { label: "Закрытый", value: "locked", default: current === VoiceTemporaryRoomAccessMode.Locked },
+    { label: "Невидимый", value: "hidden", default: current === VoiceTemporaryRoomAccessMode.Hidden },
   ];
 
   await api.interactions.createModal(i.id, i.token, {
     title: "Настройки комнаты",
-    custom_id: `voice-room-config-modal:${room.channel_id}`,
+    custom_id: `voice-room-config-modal:${channelId}`,
     components: [
       {
         type: ComponentType.Label,

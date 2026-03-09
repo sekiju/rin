@@ -7,7 +7,6 @@ const handler: EventHandler<GatewayDispatchEvents.GuildDelete, "db"> = {
   handler: async ({ data: guild, db }) => {
     if (guild.unavailable === true) return;
     await db.serverConfigs.remove(guild.id);
-    await db.serverConfigCategories.remove(guild.id);
   },
 };
 

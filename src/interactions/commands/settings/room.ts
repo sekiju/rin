@@ -2,7 +2,6 @@ import {
   APILabelComponent,
   ChannelType,
   ComponentType,
-  SelectMenuDefaultValueType,
   TextInputStyle
 } from "discord-api-types/v10";
 import type { CommandCtx } from "~/interactions/router";
@@ -70,27 +69,17 @@ export const ROOM_MODAL_COMPONENTS = [
 export async function handleServerSettingsRoomCommand(ctx: CommandCtx) {
   const { interaction, guildId, api, db } = ctx;
 
-  let config = db.serverConfigs.get(guildId);
-  config ||= {
-    guild_id: guildId,
-    room_channel_id: null,
-    room_name_template: null,
-    room_category_sync: false,
-    server_mods_as_room_mods: false,
-    experiment_keyboard_layout_fix: false,
-  };
-
-  const categoryIds = db.serverConfigCategories.get(guildId) ?? [];
+  const config = db.serverConfigs.get(guildId, true);
 
   await api.interactions.createModal(interaction.id, interaction.token, {
     title: "Настройки голосовых комнат",
     custom_id: "server-rooms-config-modal",
     components: createComponents(ROOM_MODAL_COMPONENTS, {
-      room_channel: config.room_channel_id ? [config.room_channel_id] : [],
-      room_categories: categoryIds,
-      room_name_template: config.room_name_template ?? "",
-      room_category_sync: config.room_category_sync,
-      server_mods_as_room_mods: config.server_mods_as_room_mods,
+      room_channel: config.voice.triggerChannelId ? [config.voice.triggerChannelId] : [],
+      room_categories: config.voice.categories,
+      room_name_template: config.voice.nameTemplate,
+      room_category_sync: config.voice.categoryPermissionSync,
+      server_mods_as_room_mods: config.voice.promoteServerMods,
     }),
   });
 }

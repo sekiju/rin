@@ -1,7 +1,6 @@
-import { APIModalSubmissionComponent, MessageFlags, PermissionFlagsBits } from "discord-api-types/v10";
-import type { VoiceTemporaryRoomAccessMode } from "~/db";
+import { MessageFlags, PermissionFlagsBits } from "discord-api-types/v10";
+import { VoiceTemporaryRoomAccessMode } from "~/db";
 import type { InteractionCtx } from "./router";
-import { CreateModalResponseOptions } from "@discordjs/core";
 
 export const hasPermission = (permissions: bigint, permission: bigint) => (permissions & permission) === permission;
 
@@ -39,9 +38,9 @@ export function buildRoomPermissionOverwrites(
   const perms = PermissionFlagsBits.Connect | PermissionFlagsBits.ViewChannel;
 
   const everyoneDeny =
-    accessMode === "open"
+    accessMode === VoiceTemporaryRoomAccessMode.Open
       ? 0n
-      : accessMode === "locked"
+      : accessMode === VoiceTemporaryRoomAccessMode.Locked
         ? PermissionFlagsBits.Connect
         : PermissionFlagsBits.Connect | PermissionFlagsBits.ViewChannel;
 
@@ -77,5 +76,3 @@ export async function replyEphemeral(ctx: Pick<InteractionCtx, "interaction" | "
     flags: MessageFlags.Ephemeral,
   });
 }
-
-export function parseModalResponse(modal: CreateModalResponseOptions, components: APIModalSubmissionComponent[]) {}

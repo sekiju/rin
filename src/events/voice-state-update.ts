@@ -54,7 +54,7 @@ const handler: EventHandler<GatewayDispatchEvents.VoiceStateUpdate, "db"> = {
       const displayName = data.member?.nick ?? data.member?.user?.global_name ?? data.member?.user?.username ?? "User";
       const roomName = resolveRoomName(config.voice.nameTemplate, { username: displayName });
 
-      const targetParentId = await resolveTargetCategory(api, guildId, config.voice.triggerChannelId, db);
+      const targetParentId = await resolveTargetCategory(api, guildId, config.voice.triggerChannelId, config.voice.categories);
 
       const categoryOverwrites =
         config.voice.categoryPermissionSync && targetParentId
@@ -105,8 +105,7 @@ const handler: EventHandler<GatewayDispatchEvents.VoiceStateUpdate, "db"> = {
  * 1. Configured categories (in order) — skips full ones (≥ DISCORD_CATEGORY_LIMIT channels)
  * 2. Falls back to the creation channel's own category if no categories configured
  */
-async function resolveTargetCategory(api: any, guildId: string, creationChannelId: string, db: any): Promise<string | null | undefined> {
-  const categoryIds: string[] = db.serverConfigCategories.get(guildId) ?? [];
+async function resolveTargetCategory(api: any, guildId: string, creationChannelId: string, categoryIds: string[]): Promise<string | null | undefined> {
 
   if (categoryIds.length > 0) {
     const allChannels: any[] = await api.guilds.getChannels(guildId).catch(() => []);

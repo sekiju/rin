@@ -1,8 +1,20 @@
 import { MessageFlags } from "discord-api-types/v10";
-import type { VoiceTemporaryRoomAccessMode } from "~/db";
+import { VoiceTemporaryRoomAccessMode } from "~/db";
 import { requireRoomMod } from "~/interactions/guards";
 import { buildRoomPermissionOverwrites, fetchModeratorRoleIds, getModalComponent, replyEphemeral } from "~/interactions/helpers";
 import type { InteractionCtx } from "~/interactions/router";
+
+const ACCESS_MODE_LABELS: Record<VoiceTemporaryRoomAccessMode, string> = {
+  [VoiceTemporaryRoomAccessMode.Open]: "Открытый",
+  [VoiceTemporaryRoomAccessMode.Locked]: "Закрытый",
+  [VoiceTemporaryRoomAccessMode.Hidden]: "Невидимый",
+};
+
+const ACCESS_MODE_MAP: Record<string, VoiceTemporaryRoomAccessMode> = {
+  open: VoiceTemporaryRoomAccessMode.Open,
+  locked: VoiceTemporaryRoomAccessMode.Locked,
+  hidden: VoiceTemporaryRoomAccessMode.Hidden,
+};
 
 export async function handleRoomConfigModal(ctx: InteractionCtx) {
   const { interaction, guildId, api, db } = ctx;
@@ -22,7 +34,8 @@ export async function handleRoomConfigModal(ctx: InteractionCtx) {
 
   const channelName: string = getModalComponent(comps, "channel_name")?.value ?? "";
   const userLimitRaw: string = getModalComponent(comps, "user_limit")?.value ?? "";
-  const accessMode = (getModalComponent(comps, "access_mode")?.values?.[0] ?? "open") as VoiceTemporaryRoomAccessMode;
+  const accessModeStr: string = getModalComponent(comps, "access_mode")?.values?.[0] ?? "open";
+  const accessMode: VoiceTemporaryRoomAccessMode = ACCESS_MODE_MAP[accessModeStr] ?? VoiceTemporaryRoomAccessMode.Open;
   const nsfw: boolean = Boolean(getModalComponent(comps, "nsfw_mode")?.value);
 
   const userLimit = Math.max(0, Math.min(99, parseInt(userLimitRaw) || 0));
@@ -31,8 +44,8 @@ export async function handleRoomConfigModal(ctx: InteractionCtx) {
   const whitelistIds = room.whitelist;
   const blacklistIds = room.blacklist;
 
-  const config = db.serverConfigs.get(guildId);
-  const moderatorRoleIds = config?.voice.promoteServerMods ? await fetchModeratorRoleIds(api, guildId) : [];
+  const config = db.serverConfigs.get(guildId, true);
+  const moderatorRoleIds = config.voice.promoteServerMods ? await fetchModeratorRoleIds(api, guildId) : [];
 
   const permissionOverwrites = buildRoomPermissionOverwrites(
     guildId,
@@ -42,7 +55,7 @@ export async function handleRoomConfigModal(ctx: InteractionCtx) {
     whitelistIds,
     blacklistIds,
     moderatorRoleIds,
-    config?.voice.categoryPermissionSync ?? false,
+    config.voice.categoryPermissionSync,
   );
 
   await api.channels.edit(channelId, {
@@ -52,9 +65,9 @@ export async function handleRoomConfigModal(ctx: InteractionCtx) {
     permission_overwrites: permissionOverwrites,
   });
 
-  await db.voiceTemporaryRooms.put(channelId, { ...room, accessMode: accessMode });
+  await db.voiceTemporaryRooms.put(channelId, { ...room, accessMode });
 
-  const accessModeLabel = { open: "Открытый", locked: "Закрытый", hidden: "Невидимый" }[accessMode];
+  const accessModeLabel = ACCESS_MODE_LABELS[accessMode];
 
   await api.interactions.reply(i.id, i.token, {
     content: [
