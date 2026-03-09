@@ -9,7 +9,7 @@ import {
 
 export const applicationCommands = [
   {
-    name: "server",
+    name: "settings",
     description: "Управление сервером",
     type: ApplicationCommandType.ChatInput,
     default_member_permissions: PermissionFlagsBits.Administrator.toString(),
@@ -17,17 +17,16 @@ export const applicationCommands = [
     contexts: [InteractionContextType.Guild],
     options: [
       {
-        name: "settings",
-        description: "Настройки сервера",
-        type: ApplicationCommandOptionType.SubcommandGroup,
-        options: [
-          {
-            name: "room",
-            description: "Настройки голосовых комнат",
-            type: ApplicationCommandOptionType.Subcommand,
-            options: [],
-          },
-        ],
+        name: "room",
+        description: "Настройки голосовых комнат",
+        type: ApplicationCommandOptionType.Subcommand,
+        options: [],
+      },
+      {
+        name: "experiments",
+        description: "Настройки экспериментов",
+        type: ApplicationCommandOptionType.Subcommand,
+        options: [],
       },
     ],
   },

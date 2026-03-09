@@ -8,10 +8,10 @@ const handler: EventHandler<GatewayDispatchEvents.GuildCreate, "db"> = {
     let config = await db.getConfig(guild.id);
     if (!config) return;
 
-    if (config.voice_channel_id) {
-      const exists = guild.channels.some((c) => c.id === config.voice_channel_id);
+    if (config.room_channel_id) {
+      const exists = guild.channels.some((c) => c.id === config.room_channel_id);
       if (!exists) {
-        config.voice_channel_id = null;
+        config.room_channel_id = null;
         await db.setConfig(config);
       }
     }

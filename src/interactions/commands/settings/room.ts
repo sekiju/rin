@@ -1,9 +1,8 @@
 import { ChannelType, ComponentType, SelectMenuDefaultValueType, TextInputStyle } from "discord-api-types/v10";
-import type { InteractionCtx } from "~/interactions/router";
+import type { CommandCtx } from "~/interactions/router";
 
-export async function handleServerSettingsRoomCommand(ctx: InteractionCtx) {
+export async function handleServerSettingsRoomCommand(ctx: CommandCtx) {
   const { interaction, guildId, api, db } = ctx;
-  const i = interaction as any;
 
   let config = await db.getConfig(guildId);
   config ||= {
@@ -12,13 +11,14 @@ export async function handleServerSettingsRoomCommand(ctx: InteractionCtx) {
     room_name_template: null,
     room_category_sync: false,
     server_mods_as_room_mods: false,
+    experiment_keyboard_layout_fix: false,
   };
 
   const categoryIds = await db.getServerConfigCategories(guildId);
 
-  await api.interactions.createModal(i.id, i.token, {
-    title: "Настройки сервера",
-    custom_id: "server-config-modal",
+  await api.interactions.createModal(interaction.id, interaction.token, {
+    title: "Настройки голосовых комнат",
+    custom_id: "server-rooms-config-modal",
     components: [
       {
         type: ComponentType.Label,
@@ -82,5 +82,5 @@ export async function handleServerSettingsRoomCommand(ctx: InteractionCtx) {
         },
       },
     ],
-  } as any);
+  });
 }

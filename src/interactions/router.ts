@@ -1,16 +1,19 @@
-import { InteractionType } from "discord-api-types/v10";
+import { APIApplicationCommandInteraction, APIModalSubmitInteraction, InteractionType } from "discord-api-types/v10";
 import type { APIInteraction } from "discord-api-types/v10";
 import type { API } from "@discordjs/core";
 import type { API as API2 } from "@discordjs/core/http-only";
 import type * as db from "~/db";
 
-export interface InteractionCtx {
-  interaction: APIInteraction;
+export interface InteractionCtx<T extends APIInteraction = APIInteraction> {
+  interaction: T;
   guildId: string;
   invokerId: string;
   api: API | API2;
   db: typeof db;
 }
+
+export type CommandCtx = InteractionCtx<APIApplicationCommandInteraction>;
+export type ModalCtx = InteractionCtx<APIModalSubmitInteraction>;
 
 type HandlerFn = (ctx: InteractionCtx) => Promise<void>;
 

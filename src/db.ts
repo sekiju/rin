@@ -6,6 +6,7 @@ export type ServerConfig = {
   room_name_template: string | null;
   room_category_sync: boolean;
   server_mods_as_room_mods: boolean;
+  experiment_keyboard_layout_fix: boolean;
 };
 
 export const db = new SQL(process.env.DATABASE_URL || "sqlite://data.sqlite");
@@ -77,6 +78,10 @@ const MIGRATIONS: { id: number; sql: string }[] = [
       );
     `,
   },
+  {
+    id: 2,
+    sql: `ALTER TABLE server_configs ADD COLUMN experiment_keyboard_layout_fix INTEGER DEFAULT 0;`,
+  },
 ];
 
 async function runMigrations() {
@@ -108,18 +113,20 @@ export async function getConfig(guildId: string): Promise<ServerConfig | null> {
     room_name_template: row.room_name_template,
     room_category_sync: Boolean(row.room_category_sync),
     server_mods_as_room_mods: Boolean(row.server_mods_as_room_mods),
+    experiment_keyboard_layout_fix: Boolean(row.experiment_keyboard_layout_fix),
   };
 }
 
 export async function setConfig(config: ServerConfig) {
   await db`
-    INSERT INTO server_configs (guild_id, room_channel_id, room_name_template, room_category_sync, server_mods_as_room_mods)
-    VALUES (${config.guild_id}, ${config.room_channel_id}, ${config.room_name_template}, ${config.room_category_sync ? 1 : 0}, ${config.server_mods_as_room_mods ? 1 : 0})
+    INSERT INTO server_configs (guild_id, room_channel_id, room_name_template, room_category_sync, server_mods_as_room_mods, experiment_keyboard_layout_fix)
+    VALUES (${config.guild_id}, ${config.room_channel_id}, ${config.room_name_template}, ${config.room_category_sync ? 1 : 0}, ${config.server_mods_as_room_mods ? 1 : 0}, ${config.experiment_keyboard_layout_fix ? 1 : 0})
     ON CONFLICT(guild_id) DO UPDATE SET
         room_channel_id=excluded.room_channel_id,
         room_name_template=excluded.room_name_template,
         room_category_sync=excluded.room_category_sync,
-        server_mods_as_room_mods=excluded.server_mods_as_room_mods
+        server_mods_as_room_mods=excluded.server_mods_as_room_mods,
+        experiment_keyboard_layout_fix=excluded.experiment_keyboard_layout_fix
   `;
 }
 
