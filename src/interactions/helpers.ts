@@ -1,7 +1,6 @@
-import { APIModalSubmissionComponent, MessageFlags, PermissionFlagsBits } from "discord-api-types/v10";
-import type { VoiceTemporaryRoomAccessMode } from "~/db";
+import { MessageFlags, PermissionFlagsBits } from "discord-api-types/v10";
+import { VoiceTemporaryRoomAccessMode } from "~/db";
 import type { InteractionCtx } from "./router";
-import { CreateModalResponseOptions } from "@discordjs/core";
 
 export const hasPermission = (permissions: bigint, permission: bigint) => (permissions & permission) === permission;
 
@@ -19,13 +18,6 @@ export function getModalComponent(components: any[], customId: string): any {
   return null;
 }
 
-/** Fetch IDs of guild roles that have ManageChannels or MoveMembers permissions. */
-export async function fetchModeratorRoleIds(api: InteractionCtx["api"], guildId: string): Promise<string[]> {
-  const modPerms = PermissionFlagsBits.ManageChannels | PermissionFlagsBits.MoveMembers;
-  const roles = await (api as any).guilds.getRoles(guildId).catch(() => []);
-  return (roles as any[]).filter((r) => r.id !== guildId && (BigInt(r.permissions) & modPerms) !== 0n).map((r) => r.id);
-}
-
 export function buildRoomPermissionOverwrites(
   guildId: string,
   ownerId: string,
@@ -33,15 +25,14 @@ export function buildRoomPermissionOverwrites(
   moderatorIds: string[],
   whitelistIds: string[],
   blacklistIds: string[],
-  moderatorRoleIds: string[] = [],
   syncWithCategory: boolean = false,
 ): any[] {
   const perms = PermissionFlagsBits.Connect | PermissionFlagsBits.ViewChannel;
 
   const everyoneDeny =
-    accessMode === "open"
+    accessMode === VoiceTemporaryRoomAccessMode.Open
       ? 0n
-      : accessMode === "locked"
+      : accessMode === VoiceTemporaryRoomAccessMode.Locked
         ? PermissionFlagsBits.Connect
         : PermissionFlagsBits.Connect | PermissionFlagsBits.ViewChannel;
 
@@ -60,7 +51,6 @@ export function buildRoomPermissionOverwrites(
 
   return [
     ...(everyoneOverwrite ? [everyoneOverwrite] : []),
-    ...moderatorRoleIds.map((id) => ({ id, type: 0, allow: perms.toString(), deny: "0" })),
     ...[...memberOverwrites.entries()].map(([id, { allow, deny }]) => ({
       id,
       type: 1,
@@ -71,11 +61,10 @@ export function buildRoomPermissionOverwrites(
 }
 
 export async function replyEphemeral(ctx: Pick<InteractionCtx, "interaction" | "api">, content: string): Promise<void> {
+  // fixme: strict type
   const i = ctx.interaction as any;
   await (ctx.api as any).interactions.reply(i.id, i.token, {
     content,
     flags: MessageFlags.Ephemeral,
   });
 }
-
-export function parseModalResponse(modal: CreateModalResponseOptions, components: APIModalSubmissionComponent[]) {}

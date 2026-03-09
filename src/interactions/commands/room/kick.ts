@@ -5,13 +5,15 @@ import type { InteractionCtx } from "~/interactions/router";
 
 export async function handleRoomKickCommand(ctx: InteractionCtx) {
   const { interaction, guildId, invokerId, api, db } = ctx;
+  // fixme: strict type
   const i = interaction as any;
 
   const targetUserId = i.data?.options?.[0]?.options?.[0]?.value as string | undefined;
   if (!targetUserId) return;
 
-  const room = await requireRoom(ctx);
-  if (!room) return;
+  const found = await requireRoom(ctx);
+  if (!found) return;
+  const { channelId: roomChannelId, room } = found;
 
   if (!(await requireRoomMod(ctx, room))) return;
 
@@ -20,13 +22,19 @@ export async function handleRoomKickCommand(ctx: InteractionCtx) {
     return;
   }
 
-  if (targetUserId === room.owner_id) {
+  if (targetUserId === room.ownerId) {
     await replyEphemeral(ctx, "Нельзя кикнуть владельца комнаты.");
     return;
   }
 
-  const targetRoom = await db.getUserCurrentVoiceRoom(targetUserId, guildId);
-  if (targetRoom?.channel_id !== room.channel_id) {
+  let targetChannelId: string | null = null;
+  for (const [channelId, r] of db.voiceTemporaryRooms.entries()) {
+    if (r.guildId === guildId && r.members.includes(targetUserId)) {
+      targetChannelId = channelId;
+      break;
+    }
+  }
+  if (targetChannelId !== roomChannelId) {
     await replyEphemeral(ctx, "Этот участник не находится в вашей комнате.");
     return;
   }

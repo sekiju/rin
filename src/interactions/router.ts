@@ -15,7 +15,8 @@ export interface InteractionCtx<T extends APIInteraction = APIInteraction> {
 export type CommandCtx = InteractionCtx<APIApplicationCommandInteraction>;
 export type ModalCtx = InteractionCtx<APIModalSubmitInteraction>;
 
-type HandlerFn = (ctx: InteractionCtx) => Promise<void>;
+// fixme: strict type
+type HandlerFn = (ctx: any) => Promise<void>;
 
 interface Route {
   match: (i: APIInteraction) => boolean;

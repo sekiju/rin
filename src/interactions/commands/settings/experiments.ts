@@ -1,6 +1,7 @@
 import { APILabelComponent, ComponentType } from "discord-api-types/v10";
 import type { CommandCtx } from "~/interactions/router";
 import { createComponents } from "~/utils/modal";
+import { ExperimentFlags } from "~/db";
 
 export const EXPERIMENTS_MODAL_COMPONENTS = [
   {
@@ -20,18 +21,10 @@ export const EXPERIMENTS_MODAL_COMPONENTS = [
 export async function handleServerSettingsExperimentsCommand(ctx: CommandCtx) {
   const { interaction, guildId, api, db } = ctx;
 
-  let config = await db.getConfig(guildId);
-  config ||= {
-    guild_id: guildId,
-    room_channel_id: null,
-    room_name_template: null,
-    room_category_sync: false,
-    server_mods_as_room_mods: false,
-    experiment_keyboard_layout_fix: false,
-  };
+  const config = db.serverConfigs.get(guildId, true);
 
   const experiments: string[] = [];
-  if (config.experiment_keyboard_layout_fix) {
+  if (config.experiments & ExperimentFlags.RussianKeyboardLayoutFix) {
     experiments.push("experiment_keyboard_layout_fix");
   }
 

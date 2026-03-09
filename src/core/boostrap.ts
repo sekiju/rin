@@ -5,7 +5,7 @@ type BoundHandler = (data: any) => Promise<void>;
 
 export function buildDependencyTree(
   handlers: EventHandler[],
-  context: EventContext,
+  context: Omit<EventContext, "api">,
   services: Partial<Services>,
 ): Map<string, BoundHandler> {
   const tree = new Map<string, BoundHandler>();
@@ -21,7 +21,7 @@ export function buildDependencyTree(
 
     const injected = Object.fromEntries((handler.services ?? []).map((s) => [s, services[s]])) as Pick<
       Services,
-      (typeof handler.services)[number]
+      NonNullable<typeof handler.services>[number]
     >;
 
     const bound: BoundHandler = (data) => handler.handler({ ...context, ...injected, data: data.data, api: data.api });
@@ -34,7 +34,7 @@ export function buildDependencyTree(
 
 export function registerHandlers(client: Client, tree: Map<string, BoundHandler>) {
   for (const [event, handler] of tree) {
-    client.on(event as any, async (data) => {
+    client.on(event as any, async (data: any) => {
       try {
         await handler(data);
       } catch (err) {

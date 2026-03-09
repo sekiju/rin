@@ -1,16 +1,29 @@
 import { MessageFlags } from "discord-api-types/v10";
-import type { VoiceTemporaryRoomAccessMode } from "~/db";
+import { VoiceTemporaryRoomAccessMode } from "~/db";
 import { requireRoomMod } from "~/interactions/guards";
-import { buildRoomPermissionOverwrites, fetchModeratorRoleIds, getModalComponent, replyEphemeral } from "~/interactions/helpers";
+import { buildRoomPermissionOverwrites, getModalComponent, replyEphemeral } from "~/interactions/helpers";
 import type { InteractionCtx } from "~/interactions/router";
+
+const ACCESS_MODE_LABELS: Record<VoiceTemporaryRoomAccessMode, string> = {
+  [VoiceTemporaryRoomAccessMode.Open]: "Открытый",
+  [VoiceTemporaryRoomAccessMode.Locked]: "Закрытый",
+  [VoiceTemporaryRoomAccessMode.Hidden]: "Невидимый",
+};
+
+const ACCESS_MODE_MAP: Record<string, VoiceTemporaryRoomAccessMode> = {
+  open: VoiceTemporaryRoomAccessMode.Open,
+  locked: VoiceTemporaryRoomAccessMode.Locked,
+  hidden: VoiceTemporaryRoomAccessMode.Hidden,
+};
 
 export async function handleRoomConfigModal(ctx: InteractionCtx) {
   const { interaction, guildId, api, db } = ctx;
+  // fixme: strict type
   const i = interaction as any;
 
   const channelId = i.data.custom_id.split(":")[1]!;
 
-  const room = await db.getVoiceTemporaryRoom(channelId);
+  const room = db.voiceTemporaryRooms.get(channelId);
   if (!room) {
     await replyEphemeral(ctx, "Комната больше не существует.");
     return;
@@ -22,27 +35,26 @@ export async function handleRoomConfigModal(ctx: InteractionCtx) {
 
   const channelName: string = getModalComponent(comps, "channel_name")?.value ?? "";
   const userLimitRaw: string = getModalComponent(comps, "user_limit")?.value ?? "";
-  const accessMode = (getModalComponent(comps, "access_mode")?.values?.[0] ?? "open") as VoiceTemporaryRoomAccessMode;
+  const accessModeStr: string = getModalComponent(comps, "access_mode")?.values?.[0] ?? "open";
+  const accessMode: VoiceTemporaryRoomAccessMode = ACCESS_MODE_MAP[accessModeStr] ?? VoiceTemporaryRoomAccessMode.Open;
   const nsfw: boolean = Boolean(getModalComponent(comps, "nsfw_mode")?.value);
 
   const userLimit = Math.max(0, Math.min(99, parseInt(userLimitRaw) || 0));
 
-  const moderatorIds = (await db.getVoiceTemporaryRoomModerators(channelId)).map((m: any) => m.user_id);
-  const whitelistIds = await db.getVoiceTemporaryRoomWhitelist(channelId);
-  const blacklistIds = await db.getVoiceTemporaryRoomBlacklist(channelId);
+  const moderatorIds = room.moderators;
+  const whitelistIds = room.whitelist;
+  const blacklistIds = room.blacklist;
 
-  const config = await db.getConfig(guildId);
-  const moderatorRoleIds = config?.server_mods_as_room_mods ? await fetchModeratorRoleIds(api, guildId) : [];
+  const config = db.serverConfigs.get(guildId, true);
 
   const permissionOverwrites = buildRoomPermissionOverwrites(
     guildId,
-    room.owner_id,
+    room.ownerId,
     accessMode,
     moderatorIds,
     whitelistIds,
     blacklistIds,
-    moderatorRoleIds,
-    config?.room_category_sync ?? false,
+    config.voice.categoryPermissionSync,
   );
 
   await api.channels.edit(channelId, {
@@ -52,9 +64,9 @@ export async function handleRoomConfigModal(ctx: InteractionCtx) {
     permission_overwrites: permissionOverwrites,
   });
 
-  await db.setVoiceTemporaryRoomAccessMode(channelId, accessMode);
+  await db.voiceTemporaryRooms.put(channelId, { ...room, accessMode });
 
-  const accessModeLabel = { open: "Открытый", locked: "Закрытый", hidden: "Невидимый" }[accessMode];
+  const accessModeLabel = ACCESS_MODE_LABELS[accessMode];
 
   await api.interactions.reply(i.id, i.token, {
     content: [

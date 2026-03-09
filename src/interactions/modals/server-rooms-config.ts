@@ -1,6 +1,5 @@
 import { MessageFlags, PermissionFlagsBits } from "discord-api-types/v10";
-import type { ServerConfig } from "~/db";
-import { getModalComponent, hasPermission } from "~/interactions/helpers";
+import { hasPermission } from "~/interactions/helpers";
 import type { ModalCtx } from "~/interactions/router";
 import { parseComponents } from "~/utils/modal";
 import { ROOM_MODAL_COMPONENTS } from "~/interactions/commands/settings/room";
@@ -9,46 +8,49 @@ export async function handleServerRoomsConfigModal(ctx: ModalCtx) {
   const { interaction, guildId, api, db } = ctx;
 
   const comps = interaction.data.components;
+  const parsed = parseComponents(ROOM_MODAL_COMPONENTS, comps);
 
-  const parsed = parseComponents(ROOM_MODAL_COMPONENTS, interaction.data.components);
+  const triggerChannelId = parsed.triggerChannelId[0] ?? null;
+  const nameTemplate = parsed.nameTemplate.trim() || "{username}";
 
-  const newConfig: Partial<ServerConfig> = {
-    guild_id: guildId,
-    room_channel_id: parsed.room_channel[0] ?? null,
-    room_name_template: parsed.room_name_template.trim() || null,
-    room_category_sync: parsed.room_category_sync,
-    server_mods_as_room_mods: parsed.server_mods_as_room_mods,
-  };
-  const newCategoryIds: string[] = getModalComponent(comps, "room_categories")?.values ?? [];
+  const prevConfig = db.serverConfigs.get(guildId, true);
+  const voiceRoomChanged = triggerChannelId !== prevConfig.voice.triggerChannelId;
 
-  const prevConfig = await db.getConfig(guildId);
-  const voiceRoomChanged = newConfig.room_channel_id !== prevConfig?.room_channel_id;
-
-  const resolvedChannel = interaction.data.resolved?.channels?.[newConfig.room_channel_id];
+  const resolvedChannel = triggerChannelId ? interaction.data.resolved?.channels?.[triggerChannelId] : null;
   const requiredPerms = PermissionFlagsBits.ViewChannel | PermissionFlagsBits.ManageChannels | PermissionFlagsBits.MoveMembers;
-  if (voiceRoomChanged && !hasPermission(BigInt(resolvedChannel?.permissions || "0"), requiredPerms)) {
+  if (voiceRoomChanged && triggerChannelId && !hasPermission(BigInt(resolvedChannel?.permissions || "0"), requiredPerms)) {
     await api.interactions.reply(interaction.id, interaction.token, {
-      content: `У бота недостаточно прав для канала <#${newConfig.room_channel_id}>. Необходимые права: Просмотр канала, Управление каналом, Перемещение участников.\n-# Настройки не были изменены.`,
+      content: `У бота недостаточно прав для канала <#${triggerChannelId}>. Необходимые права: Просмотр канала, Управление каналом, Перемещение участников.\n-# Настройки не были изменены.`,
       allowed_mentions: {},
       flags: MessageFlags.Ephemeral,
     });
     return;
   }
 
-  await db.setConfig({ ...prevConfig, ...newConfig });
-  await db.setServerConfigCategories(guildId, newCategoryIds);
+  console.log("parsed", parsed);
 
-  const categoriesText = newCategoryIds.length > 0 ? newCategoryIds.map((id) => `<#${id}>`).join(", ") : "*(Не заданы)*";
-  const templateText = newConfig.room_name_template ? `\`${newConfig.room_name_template}\`` : "*(По умолчанию)*";
+  await db.serverConfigs.put(guildId, {
+    ...prevConfig,
+    voice: {
+      ...prevConfig.voice,
+      enabled: parsed.enabled,
+      triggerChannelId,
+      nameTemplate,
+      categories: parsed.categories,
+      categoryPermissionSync: parsed.categoryPermissionSync,
+    },
+  });
+
+  const categoriesText = parsed.categories.length ? parsed.categories.map((id) => `<#${id}>`).join(", ") : "*(Не заданы)*";
 
   await api.interactions.reply(interaction.id, interaction.token, {
     content: [
       "Настройки голосовых комнат обновлены",
-      `-# - Голосовой канал для создания комнат: ${newConfig.room_channel_id ? `<#${newConfig.room_channel_id}>` : "*(Не задан)*"}`,
+      `-# - Статус: ${parsed.enabled ? "Включена" : "Выключена"}`,
+      `-# - Голосовой канал для создания комнат: ${triggerChannelId ? `<#${triggerChannelId}>` : "*(Не задан)*"}`,
       `-# - Категории комнат: ${categoriesText}`,
-      `-# - Шаблон имени комнаты: ${templateText}`,
-      `-# - Синхронизация с категорией: ${newConfig.room_category_sync ? "Включена" : "Выключена"}`,
-      `-# - Модераторы сервера как модераторы комнат: ${newConfig.server_mods_as_room_mods ? "Включено" : "Выключено"}`,
+      `-# - Шаблон имени комнаты: \`${nameTemplate}\``,
+      `-# - Синхронизация с категорией: ${parsed.categoryPermissionSync ? "Включена" : "Выключена"}`,
     ].join("\n"),
     allowed_mentions: {},
     flags: MessageFlags.Ephemeral,

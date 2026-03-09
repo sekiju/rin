@@ -1,15 +1,16 @@
 import { MessageFlags } from "discord-api-types/v10";
 import { requireRoomMod } from "~/interactions/guards";
-import { buildRoomPermissionOverwrites, fetchModeratorRoleIds, getModalComponent, replyEphemeral } from "~/interactions/helpers";
+import { buildRoomPermissionOverwrites, getModalComponent, replyEphemeral } from "~/interactions/helpers";
 import type { InteractionCtx } from "~/interactions/router";
 
 export async function handleRoomMembersModal(ctx: InteractionCtx) {
   const { interaction, guildId, api, db } = ctx;
+  // fixme: strict type
   const i = interaction as any;
 
   const channelId = i.data.custom_id.split(":")[1]!;
 
-  const room = await db.getVoiceTemporaryRoom(channelId);
+  const room = db.voiceTemporaryRooms.get(channelId);
   if (!room) {
     await replyEphemeral(ctx, "Комната больше не существует.");
     return;
@@ -43,25 +44,21 @@ export async function handleRoomMembersModal(ctx: InteractionCtx) {
     return;
   }
 
-  const config = await db.getConfig(guildId);
-  const moderatorRoleIds = config?.server_mods_as_room_mods ? await fetchModeratorRoleIds(api, guildId) : [];
+  const config = db.serverConfigs.get(guildId, true);
 
   const permissionOverwrites = buildRoomPermissionOverwrites(
     guildId,
-    room.owner_id,
-    room.access_mode,
+    room.ownerId,
+    room.accessMode,
     moderatorIds,
     whitelistIds,
     blacklistIds,
-    moderatorRoleIds,
-    config?.room_category_sync ?? false,
+    config.voice.categoryPermissionSync,
   );
 
   await api.channels.edit(channelId, { permission_overwrites: permissionOverwrites });
 
-  await db.setVoiceTemporaryRoomModerators(channelId, moderatorIds);
-  await db.setVoiceTemporaryRoomWhitelist(channelId, whitelistIds);
-  await db.setVoiceTemporaryRoomBlacklist(channelId, blacklistIds);
+  await db.voiceTemporaryRooms.put(channelId, { ...room, moderators: moderatorIds, whitelist: whitelistIds, blacklist: blacklistIds });
 
   const mention = (ids: string[]) => (ids.length > 0 ? ids.map((id) => `<@${id}>`).join(", ") : "*(Нет)*");
 

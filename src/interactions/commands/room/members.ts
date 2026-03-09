@@ -3,24 +3,26 @@ import { requireRoom, requireRoomMod } from "~/interactions/guards";
 import type { InteractionCtx } from "~/interactions/router";
 
 export async function handleRoomMembersCommand(ctx: InteractionCtx) {
-  const { interaction, api, db } = ctx;
+  const { interaction, api } = ctx;
+  // fixme: strict type
   const i = interaction as any;
 
-  const room = await requireRoom(ctx);
-  if (!room) return;
+  const found = await requireRoom(ctx);
+  if (!found) return;
+  const { channelId, room } = found;
 
   if (!(await requireRoomMod(ctx, room))) return;
 
-  const moderators = await db.getVoiceTemporaryRoomModerators(room.channel_id);
-  const whitelist = await db.getVoiceTemporaryRoomWhitelist(room.channel_id);
-  const blacklist = await db.getVoiceTemporaryRoomBlacklist(room.channel_id);
+  const moderators = room.moderators;
+  const whitelist = room.whitelist;
+  const blacklist = room.blacklist;
 
   const toDefaultUsers = (ids: string[]) =>
     ids.map((id) => ({ id, type: SelectMenuDefaultValueType.User }) satisfies APISelectMenuDefaultValue<SelectMenuDefaultValueType.User>);
 
   await api.interactions.createModal(i.id, i.token, {
     title: "Участники комнаты",
-    custom_id: `voice-room-members-modal:${room.channel_id}`,
+    custom_id: `voice-room-members-modal:${channelId}`,
     components: [
       {
         type: ComponentType.Label,
@@ -30,7 +32,7 @@ export async function handleRoomMembersCommand(ctx: InteractionCtx) {
           custom_id: "moderators",
           min_values: 0,
           max_values: 10,
-          default_values: toDefaultUsers(moderators.map((m) => m.user_id)),
+          default_values: toDefaultUsers(moderators),
           required: false,
         },
       },
