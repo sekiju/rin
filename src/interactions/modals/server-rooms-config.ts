@@ -2,18 +2,22 @@ import { MessageFlags, PermissionFlagsBits } from "discord-api-types/v10";
 import type { ServerConfig } from "~/db";
 import { getModalComponent, hasPermission } from "~/interactions/helpers";
 import type { ModalCtx } from "~/interactions/router";
+import { parseComponents } from "~/utils/modal";
+import { ROOM_MODAL_COMPONENTS } from "~/interactions/commands/settings/room";
 
 export async function handleServerRoomsConfigModal(ctx: ModalCtx) {
   const { interaction, guildId, api, db } = ctx;
 
   const comps = interaction.data.components;
 
+  const parsed = parseComponents(ROOM_MODAL_COMPONENTS, interaction.data.components);
+
   const newConfig: Partial<ServerConfig> = {
     guild_id: guildId,
-    room_channel_id: getModalComponent(comps, "room_channel")?.values?.[0] ?? null,
-    room_name_template: getModalComponent(comps, "room_name_template")?.value?.trim() || null,
-    room_category_sync: Boolean(getModalComponent(comps, "room_category_sync")?.value),
-    server_mods_as_room_mods: Boolean(getModalComponent(comps, "server_mods_as_room_mods")?.value),
+    room_channel_id: parsed.room_channel[0] ?? null,
+    room_name_template: parsed.room_name_template.trim() || null,
+    room_category_sync: parsed.room_category_sync,
+    server_mods_as_room_mods: parsed.server_mods_as_room_mods,
   };
   const newCategoryIds: string[] = getModalComponent(comps, "room_categories")?.values ?? [];
 

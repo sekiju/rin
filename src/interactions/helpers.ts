@@ -1,6 +1,7 @@
-import { MessageFlags, PermissionFlagsBits } from "discord-api-types/v10";
+import { APIModalSubmissionComponent, MessageFlags, PermissionFlagsBits } from "discord-api-types/v10";
 import type { VoiceTemporaryRoomAccessMode } from "~/db";
 import type { InteractionCtx } from "./router";
+import { CreateModalResponseOptions } from "@discordjs/core";
 
 export const hasPermission = (permissions: bigint, permission: bigint) => (permissions & permission) === permission;
 
@@ -76,3 +77,5 @@ export async function replyEphemeral(ctx: Pick<InteractionCtx, "interaction" | "
     flags: MessageFlags.Ephemeral,
   });
 }
+
+export function parseModalResponse(modal: CreateModalResponseOptions, components: APIModalSubmissionComponent[]) {}
