@@ -1,15 +1,24 @@
 import { SQL } from "bun";
+import { open } from "lmdb";
+import { VersionedStore } from "~/utils/versioned-store";
 
-export type ServerConfig = {
+const root = open({ path: "./data" });
+
+export interface ServerConfig {
   guild_id: string;
   room_channel_id: string | null;
   room_name_template: string | null;
   room_category_sync: boolean;
   server_mods_as_room_mods: boolean;
   experiment_keyboard_layout_fix: boolean;
-};
+}
 
-export const db = new SQL(process.env.DATABASE_URL || "sqlite://data.sqlite");
+export const serverConfigs = new VersionedStore<ServerConfig>({
+  db: root,
+  name: "server-configs",
+  version: 1,
+  migrations: {},
+});
 
 export type VoiceTemporaryRoomAccessMode = "open" | "locked" | "hidden";
 
@@ -20,10 +29,26 @@ export type VoiceTemporaryRoom = {
   access_mode: VoiceTemporaryRoomAccessMode;
 };
 
+export const voiceTemporaryRooms = new VersionedStore<VoiceTemporaryRoom>({
+  db: root,
+  name: "voice-temporary-rooms",
+  version: 1,
+  migrations: {},
+});
+
 export type VoiceTemporaryRoomModerator = {
   channel_id: string;
   user_id: string;
 };
+
+export const voiceTemporaryRoomModerators = new VersionedStore<VoiceTemporaryRoomModerator>({
+  db: root,
+  name: "voice-temporary-room-moderators",
+  version: 1,
+  migrations: {},
+});
+
+export const db = new SQL(process.env.DATABASE_URL || "sqlite://data.sqlite");
 
 const MIGRATIONS: { id: number; sql: string }[] = [
   {
