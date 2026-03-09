@@ -1,5 +1,5 @@
 import { ChannelType, GatewayDispatchEvents, PermissionFlagsBits } from "discord-api-types/v10";
-import { EventHandler } from "~/core/types";
+import { EventContext, EventHandler } from "~/core/types";
 import { VoiceTemporaryRoomAccessMode } from "~/db";
 
 /** Maximum number of channels allowed inside a single Discord category. */
@@ -109,7 +109,7 @@ const handler: EventHandler<GatewayDispatchEvents.VoiceStateUpdate, "db"> = {
  * 2. Falls back to the creation channel's own category if no categories configured
  */
 async function resolveTargetCategory(
-  api: any,
+  api: EventContext["api"],
   guildId: string,
   creationChannelId: string,
   categoryIds: string[],
