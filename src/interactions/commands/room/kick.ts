@@ -21,14 +21,14 @@ export async function handleRoomKickCommand(ctx: InteractionCtx) {
     return;
   }
 
-  if (targetUserId === room.owner_id) {
+  if (targetUserId === room.ownerId) {
     await replyEphemeral(ctx, "Нельзя кикнуть владельца комнаты.");
     return;
   }
 
   let targetRoom: VoiceTemporaryRoom | null = null;
   for (const [, r] of db.voiceTemporaryRooms.entries()) {
-    if (r.guild_id === guildId && r.members.includes(targetUserId)) {
+    if (r.guildId === guildId && r.members.includes(targetUserId)) {
       targetRoom = r;
       break;
     }

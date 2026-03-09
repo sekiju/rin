@@ -7,13 +7,21 @@ const root = open({ path: "./data" });
 /** Sentinel key written to the root LMDB store once SQLite migration completes. */
 const SQLITE_MIGRATION_KEY = "_sqlite_migration_done";
 
+export enum ExperimentFlags {
+  None = 0,
+  RussianKeyboardLayoutFix =  1 << 0,
+}
+
 export interface ServerConfig {
-  guild_id: string;
-  room_channel_id: string | null;
-  room_name_template: string | null;
-  room_category_sync: boolean;
-  server_mods_as_room_mods: boolean;
-  experiment_keyboard_layout_fix: boolean;
+  voice: {
+    enabled: boolean;
+    triggerChannelId: string | null;
+    nameTemplate: string;
+    categories: string[];
+    categoryPermissionSync: boolean;
+    promoteServerMods: boolean;
+  };
+  experiments: ExperimentFlags;
 }
 
 export const serverConfigs = new VersionedStore<ServerConfig>({
@@ -21,18 +29,19 @@ export const serverConfigs = new VersionedStore<ServerConfig>({
   name: "server-configs",
   version: 1,
   migrations: {},
+  default: { voice: { enabled: false, triggerChannelId: null, nameTemplate: "{username}", categories: [], categoryPermissionSync: false, promoteServerMods: false }, experiments: 0 },
 });
 
-/** Per-guild ordered list of category IDs for temporary room placement. */
-export const serverConfigCategories = root.openDB<string[], string>({ name: "server-config-categories" });
-
-export type VoiceTemporaryRoomAccessMode = "open" | "locked" | "hidden";
+export enum VoiceTemporaryRoomAccessMode {
+  Open,
+  Locked,
+  Hidden,
+}
 
 export type VoiceTemporaryRoom = {
-  channel_id: string;
-  guild_id: string;
-  owner_id: string;
-  access_mode: VoiceTemporaryRoomAccessMode;
+  guildId: string;
+  ownerId: string;
+  accessMode: VoiceTemporaryRoomAccessMode;
   /** User IDs currently tracked as members of this room. */
   members: string[];
   /** User IDs on the room whitelist. */
@@ -48,6 +57,7 @@ export const voiceTemporaryRooms = new VersionedStore<VoiceTemporaryRoom>({
   name: "voice-temporary-rooms",
   version: 1,
   migrations: {},
+  default: { guildId: "", ownerId: "", accessMode: VoiceTemporaryRoomAccessMode.Open, members: [], whitelist: [], blacklist: [], moderators: [] },
 });
 
 // ---------------------------------------------------------------------------
@@ -92,24 +102,29 @@ async function migrateFromSqlite(): Promise<void> {
 
     for (const row of configs) {
       await serverConfigs.put(row.guild_id, {
-        guild_id: row.guild_id,
-        room_channel_id: row.room_channel_id ?? null,
-        room_name_template: row.room_name_template ?? null,
-        room_category_sync: Boolean(row.room_category_sync),
-        server_mods_as_room_mods: Boolean(row.server_mods_as_room_mods),
-        experiment_keyboard_layout_fix: Boolean(row.experiment_keyboard_layout_fix),
+        voice: {
+          enabled: Boolean(row.voice_enabled),
+          triggerChannelId: row.trigger_channel_id ?? null,
+          nameTemplate: row.name_template ?? null,
+          categories: categoriesByGuild.get(row.guild_id) ?? [],
+          categoryPermissionSync: Boolean(row.category_permission_sync),
+          promoteServerMods: Boolean(row.promote_server_mods),
+        },
+        experiments: (row.experiment_keyboard_layout_fix ? ExperimentFlags.RussianKeyboardLayoutFix : 0),
       });
+    }
 
-      const cats = categoriesByGuild.get(row.guild_id);
-      if (cats?.length) await serverConfigCategories.put(row.guild_id, cats);
+    const accessModeMapper: Record<string, VoiceTemporaryRoomAccessMode> = {
+      "open": VoiceTemporaryRoomAccessMode.Open,
+      "locked": VoiceTemporaryRoomAccessMode.Locked,
+      "hidden": VoiceTemporaryRoomAccessMode.Hidden,
     }
 
     for (const room of rooms) {
       await voiceTemporaryRooms.put(room.channel_id, {
-        channel_id: room.channel_id,
-        guild_id: room.guild_id,
-        owner_id: room.owner_id,
-        access_mode: (room.access_mode ?? "open") as VoiceTemporaryRoomAccessMode,
+        guildId: room.guild_id,
+        ownerId: room.owner_id,
+        accessMode: accessModeMapper[room.access_mode ?? "open"],
         members: membersByChannel.get(room.channel_id) ?? [],
         whitelist: whitelistByChannel.get(room.channel_id) ?? [],
         blacklist: blacklistByChannel.get(room.channel_id) ?? [],

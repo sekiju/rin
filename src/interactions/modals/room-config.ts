@@ -32,17 +32,17 @@ export async function handleRoomConfigModal(ctx: InteractionCtx) {
   const blacklistIds = room.blacklist;
 
   const config = db.serverConfigs.get(guildId);
-  const moderatorRoleIds = config?.server_mods_as_room_mods ? await fetchModeratorRoleIds(api, guildId) : [];
+  const moderatorRoleIds = config?.voice.promoteServerMods ? await fetchModeratorRoleIds(api, guildId) : [];
 
   const permissionOverwrites = buildRoomPermissionOverwrites(
     guildId,
-    room.owner_id,
+    room.ownerId,
     accessMode,
     moderatorIds,
     whitelistIds,
     blacklistIds,
     moderatorRoleIds,
-    config?.room_category_sync ?? false,
+    config?.voice.categoryPermissionSync ?? false,
   );
 
   await api.channels.edit(channelId, {
@@ -52,7 +52,7 @@ export async function handleRoomConfigModal(ctx: InteractionCtx) {
     permission_overwrites: permissionOverwrites,
   });
 
-  await db.voiceTemporaryRooms.put(channelId, { ...room, access_mode: accessMode });
+  await db.voiceTemporaryRooms.put(channelId, { ...room, accessMode: accessMode });
 
   const accessModeLabel = { open: "Открытый", locked: "Закрытый", hidden: "Невидимый" }[accessMode];
 

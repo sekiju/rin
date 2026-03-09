@@ -1,6 +1,7 @@
 import { ChannelType, GatewayDispatchEvents, PermissionFlagsBits } from "discord-api-types/v10";
 import { fetchModeratorRoleIds } from "~/interactions/helpers";
 import { EventHandler } from "~/core/types";
+import { VoiceTemporaryRoomAccessMode } from "~/db";
 
 /** Maximum number of channels allowed inside a single Discord category. */
 const DISCORD_CATEGORY_LIMIT = 50;
@@ -17,15 +18,15 @@ const handler: EventHandler<GatewayDispatchEvents.VoiceStateUpdate, "db"> = {
     const guildId = data.guild_id;
     if (!guildId) return;
 
-    const config = db.serverConfigs.get(guildId);
-    if (!config?.room_channel_id) return;
+    const config = db.serverConfigs.get(guildId, true);
+    if (!config.voice.enabled || !config.voice.triggerChannelId) return;
 
     const userId = data.user_id;
     const newChannelId = data.channel_id;
 
     let prevChannelId: string | null = null;
     for (const [channelId, room] of db.voiceTemporaryRooms.entries()) {
-      if (room.guild_id === guildId && room.members.includes(userId)) {
+      if (room.guildId === guildId && room.members.includes(userId)) {
         await db.voiceTemporaryRooms.put(channelId, { ...room, members: room.members.filter((id) => id !== userId) });
         prevChannelId = channelId;
         break;
@@ -40,10 +41,10 @@ const handler: EventHandler<GatewayDispatchEvents.VoiceStateUpdate, "db"> = {
       }
     }
 
-    if (newChannelId === config.room_channel_id) {
+    if (newChannelId === config.voice.triggerChannelId) {
       const emptyRooms: string[] = [];
       for (const [channelId, room] of db.voiceTemporaryRooms.entries()) {
-        if (room.guild_id === guildId && room.members.length === 0) emptyRooms.push(channelId);
+        if (room.guildId === guildId && room.members.length === 0) emptyRooms.push(channelId);
       }
       for (const channelId of emptyRooms) {
         await db.voiceTemporaryRooms.remove(channelId);
@@ -51,18 +52,18 @@ const handler: EventHandler<GatewayDispatchEvents.VoiceStateUpdate, "db"> = {
       }
 
       const displayName = data.member?.nick ?? data.member?.user?.global_name ?? data.member?.user?.username ?? "User";
-      const roomName = resolveRoomName(config.room_name_template ?? "{username}", { username: displayName });
+      const roomName = resolveRoomName(config.voice.nameTemplate, { username: displayName });
 
-      const targetParentId = await resolveTargetCategory(api, guildId, config.room_channel_id, db);
+      const targetParentId = await resolveTargetCategory(api, guildId, config.voice.triggerChannelId, db);
 
       const categoryOverwrites =
-        config.room_category_sync && targetParentId
+        config.voice.categoryPermissionSync && targetParentId
           ? (((await api.channels.get(targetParentId).catch(() => null)) as any)?.permission_overwrites ?? [])
           : [];
 
       const superUserPerms = (PermissionFlagsBits.Connect | PermissionFlagsBits.ViewChannel).toString();
 
-      const moderatorRoleIds = config.server_mods_as_room_mods ? await fetchModeratorRoleIds(api, guildId) : [];
+      const moderatorRoleIds = config.voice.promoteServerMods ? await fetchModeratorRoleIds(api, guildId) : [];
       const modRoleOverwrites = moderatorRoleIds.map((id) => ({
         id,
         type: 0,
@@ -78,10 +79,9 @@ const handler: EventHandler<GatewayDispatchEvents.VoiceStateUpdate, "db"> = {
       });
 
       await db.voiceTemporaryRooms.put(newChannel.id, {
-        channel_id: newChannel.id,
-        guild_id: guildId,
-        owner_id: userId,
-        access_mode: "open",
+        guildId: guildId,
+        ownerId: userId,
+        accessMode: VoiceTemporaryRoomAccessMode.Open,
         members: [],
         whitelist: [],
         blacklist: [],

@@ -48,8 +48,8 @@ export async function handleRoomMembersModal(ctx: InteractionCtx) {
 
   const permissionOverwrites = buildRoomPermissionOverwrites(
     guildId,
-    room.owner_id,
-    room.access_mode,
+    room.ownerId,
+    room.accessMode,
     moderatorIds,
     whitelistIds,
     blacklistIds,

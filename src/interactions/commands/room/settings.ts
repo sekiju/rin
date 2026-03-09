@@ -57,7 +57,7 @@ export async function handleRoomSettingsCommand(ctx: InteractionCtx) {
           type: ComponentType.StringSelect,
           custom_id: "access_mode",
           required: true,
-          options: accessModeDefaults(room.access_mode),
+          options: accessModeDefaults(room.accessMode),
         },
       },
       {

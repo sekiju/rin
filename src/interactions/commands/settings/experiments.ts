@@ -31,7 +31,7 @@ export async function handleServerSettingsExperimentsCommand(ctx: CommandCtx) {
   };
 
   const experiments: string[] = [];
-  if (config.experiment_keyboard_layout_fix) {
+  if (config.experiments) {
     experiments.push("experiment_keyboard_layout_fix");
   }
 
