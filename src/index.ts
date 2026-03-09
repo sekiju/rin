@@ -16,8 +16,6 @@ let applicationId = atob(token.split(".")[0]!);
 
 process.title = "Rin";
 
-await db.initDb();
-
 process.on("uncaughtException", (err) => {
   console.error(`Unhandled Exception: ${err}`);
 });
