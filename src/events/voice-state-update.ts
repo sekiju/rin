@@ -23,20 +23,30 @@ const handler: EventHandler<GatewayDispatchEvents.VoiceStateUpdate, "db"> = {
     const userId = data.user_id;
     const newChannelId = data.channel_id;
 
-    const prevChannelId = await db.removeUserFromVoiceTemporaryRooms(userId, guildId);
+    let prevChannelId: string | null = null;
+    for (const [channelId, room] of db.voiceTemporaryRooms.entries()) {
+      if (room.guild_id === guildId && room.members.includes(userId)) {
+        await db.voiceTemporaryRooms.put(channelId, { ...room, members: room.members.filter((id) => id !== userId) });
+        prevChannelId = channelId;
+        break;
+      }
+    }
 
     if (prevChannelId) {
-      const count = await db.countVoiceTemporaryRoomMembers(prevChannelId);
+      const count = db.voiceTemporaryRooms.get(prevChannelId)?.members.length ?? 0;
       if (count === 0) {
-        await db.deleteVoiceTemporaryRoom(prevChannelId);
+        await db.voiceTemporaryRooms.remove(prevChannelId);
         await api.channels.delete(prevChannelId).catch(() => {});
       }
     }
 
     if (newChannelId === config.room_channel_id) {
-      const emptyRooms = await db.getEmptyVoiceTemporaryRooms(guildId);
+      const emptyRooms: string[] = [];
+      for (const [channelId, room] of db.voiceTemporaryRooms.entries()) {
+        if (room.guild_id === guildId && room.members.length === 0) emptyRooms.push(channelId);
+      }
       for (const channelId of emptyRooms) {
-        await db.deleteVoiceTemporaryRoom(channelId);
+        await db.voiceTemporaryRooms.remove(channelId);
         await api.channels.delete(channelId).catch(() => {});
       }
 
@@ -67,18 +77,22 @@ const handler: EventHandler<GatewayDispatchEvents.VoiceStateUpdate, "db"> = {
         permission_overwrites: [...categoryOverwrites, ...modRoleOverwrites, { id: userId, type: 1, allow: superUserPerms, deny: "0" }],
       });
 
-      await db.createVoiceTemporaryRoom({
+      await db.voiceTemporaryRooms.put(newChannel.id, {
         channel_id: newChannel.id,
         guild_id: guildId,
         owner_id: userId,
         access_mode: "open",
+        members: [],
+        whitelist: [],
+        blacklist: [],
+        moderators: [],
       });
 
       await api.guilds.editMember(guildId, userId, { channel_id: newChannel.id });
     } else if (newChannelId) {
-      const room = await db.getVoiceTemporaryRoom(newChannelId);
-      if (room) {
-        await db.addVoiceTemporaryRoomMember(newChannelId, userId, guildId);
+      const room = db.voiceTemporaryRooms.get(newChannelId);
+      if (room && !room.members.includes(userId)) {
+        await db.voiceTemporaryRooms.put(newChannelId, { ...room, members: [...room.members, userId] });
       }
     }
   },

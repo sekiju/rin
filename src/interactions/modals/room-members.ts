@@ -9,7 +9,7 @@ export async function handleRoomMembersModal(ctx: InteractionCtx) {
 
   const channelId = i.data.custom_id.split(":")[1]!;
 
-  const room = await db.getVoiceTemporaryRoom(channelId);
+  const room = db.voiceTemporaryRooms.get(channelId);
   if (!room) {
     await replyEphemeral(ctx, "Комната больше не существует.");
     return;
@@ -59,9 +59,7 @@ export async function handleRoomMembersModal(ctx: InteractionCtx) {
 
   await api.channels.edit(channelId, { permission_overwrites: permissionOverwrites });
 
-  await db.setVoiceTemporaryRoomModerators(channelId, moderatorIds);
-  await db.setVoiceTemporaryRoomWhitelist(channelId, whitelistIds);
-  await db.setVoiceTemporaryRoomBlacklist(channelId, blacklistIds);
+  await db.voiceTemporaryRooms.put(channelId, { ...room, moderators: moderatorIds, whitelist: whitelistIds, blacklist: blacklistIds });
 
   const mention = (ids: string[]) => (ids.length > 0 ? ids.map((id) => `<@${id}>`).join(", ") : "*(Нет)*");
 

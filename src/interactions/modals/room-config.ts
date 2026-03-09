@@ -10,7 +10,7 @@ export async function handleRoomConfigModal(ctx: InteractionCtx) {
 
   const channelId = i.data.custom_id.split(":")[1]!;
 
-  const room = await db.getVoiceTemporaryRoom(channelId);
+  const room = db.voiceTemporaryRooms.get(channelId);
   if (!room) {
     await replyEphemeral(ctx, "Комната больше не существует.");
     return;
@@ -27,9 +27,9 @@ export async function handleRoomConfigModal(ctx: InteractionCtx) {
 
   const userLimit = Math.max(0, Math.min(99, parseInt(userLimitRaw) || 0));
 
-  const moderatorIds = (await db.getVoiceTemporaryRoomModerators(channelId)).map((m: any) => m.user_id);
-  const whitelistIds = await db.getVoiceTemporaryRoomWhitelist(channelId);
-  const blacklistIds = await db.getVoiceTemporaryRoomBlacklist(channelId);
+  const moderatorIds = room.moderators;
+  const whitelistIds = room.whitelist;
+  const blacklistIds = room.blacklist;
 
   const config = db.serverConfigs.get(guildId);
   const moderatorRoleIds = config?.server_mods_as_room_mods ? await fetchModeratorRoleIds(api, guildId) : [];
@@ -52,7 +52,7 @@ export async function handleRoomConfigModal(ctx: InteractionCtx) {
     permission_overwrites: permissionOverwrites,
   });
 
-  await db.setVoiceTemporaryRoomAccessMode(channelId, accessMode);
+  await db.voiceTemporaryRooms.put(channelId, { ...room, access_mode: accessMode });
 
   const accessModeLabel = { open: "Открытый", locked: "Закрытый", hidden: "Невидимый" }[accessMode];
 
