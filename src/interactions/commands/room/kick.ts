@@ -5,6 +5,7 @@ import type { InteractionCtx } from "~/interactions/router";
 
 export async function handleRoomKickCommand(ctx: InteractionCtx) {
   const { interaction, guildId, invokerId, api, db } = ctx;
+  // fixme: strict type
   const i = interaction as any;
 
   const targetUserId = i.data?.options?.[0]?.options?.[0]?.value as string | undefined;

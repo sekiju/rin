@@ -4,6 +4,7 @@ import type { InteractionCtx } from "~/interactions/router";
 
 export async function handleRoomMembersCommand(ctx: InteractionCtx) {
   const { interaction, api } = ctx;
+  // fixme: strict type
   const i = interaction as any;
 
   const found = await requireRoom(ctx);

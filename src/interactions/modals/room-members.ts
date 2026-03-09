@@ -5,6 +5,7 @@ import type { InteractionCtx } from "~/interactions/router";
 
 export async function handleRoomMembersModal(ctx: InteractionCtx) {
   const { interaction, guildId, api, db } = ctx;
+  // fixme: strict type
   const i = interaction as any;
 
   const channelId = i.data.custom_id.split(":")[1]!;

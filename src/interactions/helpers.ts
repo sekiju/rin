@@ -61,6 +61,7 @@ export function buildRoomPermissionOverwrites(
 }
 
 export async function replyEphemeral(ctx: Pick<InteractionCtx, "interaction" | "api">, content: string): Promise<void> {
+  // fixme: strict type
   const i = ctx.interaction as any;
   await (ctx.api as any).interactions.reply(i.id, i.token, {
     content,

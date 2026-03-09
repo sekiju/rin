@@ -18,6 +18,7 @@ const ACCESS_MODE_MAP: Record<string, VoiceTemporaryRoomAccessMode> = {
 
 export async function handleRoomConfigModal(ctx: InteractionCtx) {
   const { interaction, guildId, api, db } = ctx;
+  // fixme: strict type
   const i = interaction as any;
 
   const channelId = i.data.custom_id.split(":")[1]!;
