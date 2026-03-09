@@ -1,7 +1,7 @@
 import { MessageFlags } from "discord-api-types/v10";
 import { VoiceTemporaryRoomAccessMode } from "~/db";
 import { requireRoomMod } from "~/interactions/guards";
-import { buildRoomPermissionOverwrites, fetchModeratorRoleIds, getModalComponent, replyEphemeral } from "~/interactions/helpers";
+import { buildRoomPermissionOverwrites, getModalComponent, replyEphemeral } from "~/interactions/helpers";
 import type { InteractionCtx } from "~/interactions/router";
 
 const ACCESS_MODE_LABELS: Record<VoiceTemporaryRoomAccessMode, string> = {
@@ -45,7 +45,6 @@ export async function handleRoomConfigModal(ctx: InteractionCtx) {
   const blacklistIds = room.blacklist;
 
   const config = db.serverConfigs.get(guildId, true);
-  const moderatorRoleIds = config.voice.promoteServerMods ? await fetchModeratorRoleIds(api, guildId) : [];
 
   const permissionOverwrites = buildRoomPermissionOverwrites(
     guildId,
@@ -54,7 +53,6 @@ export async function handleRoomConfigModal(ctx: InteractionCtx) {
     moderatorIds,
     whitelistIds,
     blacklistIds,
-    moderatorRoleIds,
     config.voice.categoryPermissionSync,
   );
 

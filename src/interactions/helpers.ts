@@ -18,13 +18,6 @@ export function getModalComponent(components: any[], customId: string): any {
   return null;
 }
 
-/** Fetch IDs of guild roles that have ManageChannels or MoveMembers permissions. */
-export async function fetchModeratorRoleIds(api: InteractionCtx["api"], guildId: string): Promise<string[]> {
-  const modPerms = PermissionFlagsBits.ManageChannels | PermissionFlagsBits.MoveMembers;
-  const roles = await (api as any).guilds.getRoles(guildId).catch(() => []);
-  return (roles as any[]).filter((r) => r.id !== guildId && (BigInt(r.permissions) & modPerms) !== 0n).map((r) => r.id);
-}
-
 export function buildRoomPermissionOverwrites(
   guildId: string,
   ownerId: string,
@@ -32,7 +25,6 @@ export function buildRoomPermissionOverwrites(
   moderatorIds: string[],
   whitelistIds: string[],
   blacklistIds: string[],
-  moderatorRoleIds: string[] = [],
   syncWithCategory: boolean = false,
 ): any[] {
   const perms = PermissionFlagsBits.Connect | PermissionFlagsBits.ViewChannel;
@@ -59,7 +51,6 @@ export function buildRoomPermissionOverwrites(
 
   return [
     ...(everyoneOverwrite ? [everyoneOverwrite] : []),
-    ...moderatorRoleIds.map((id) => ({ id, type: 0, allow: perms.toString(), deny: "0" })),
     ...[...memberOverwrites.entries()].map(([id, { allow, deny }]) => ({
       id,
       type: 1,

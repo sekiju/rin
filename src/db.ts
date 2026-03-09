@@ -19,7 +19,6 @@ export interface ServerConfig {
     nameTemplate: string;
     categories: string[];
     categoryPermissionSync: boolean;
-    promoteServerMods: boolean;
   };
   experiments: ExperimentFlags;
 }
@@ -29,7 +28,7 @@ export const serverConfigs = new VersionedStore<ServerConfig>({
   name: "server-configs",
   version: 1,
   migrations: {},
-  default: { voice: { enabled: false, triggerChannelId: null, nameTemplate: "{username}", categories: [], categoryPermissionSync: false, promoteServerMods: false }, experiments: 0 },
+  default: { voice: { enabled: false, triggerChannelId: null, nameTemplate: "{username}", categories: [], categoryPermissionSync: false }, experiments: 0 },
 });
 
 export enum VoiceTemporaryRoomAccessMode {
@@ -103,12 +102,11 @@ async function migrateFromSqlite(): Promise<void> {
     for (const row of configs) {
       await serverConfigs.put(row.guild_id, {
         voice: {
-          enabled: Boolean(row.voice_enabled),
-          triggerChannelId: row.trigger_channel_id ?? null,
-          nameTemplate: row.name_template ?? null,
+          enabled: Boolean(row.room_channel_id ?? null),
+          triggerChannelId: row.room_channel_id ?? null,
+          nameTemplate: row.room_name_template ?? "{username}",
           categories: categoriesByGuild.get(row.guild_id) ?? [],
-          categoryPermissionSync: Boolean(row.category_permission_sync),
-          promoteServerMods: Boolean(row.promote_server_mods),
+          categoryPermissionSync: Boolean(row.room_category_sync),
         },
         experiments: (row.experiment_keyboard_layout_fix ? ExperimentFlags.RussianKeyboardLayoutFix : 0),
       });

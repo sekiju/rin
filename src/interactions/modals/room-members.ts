@@ -1,6 +1,6 @@
 import { MessageFlags } from "discord-api-types/v10";
 import { requireRoomMod } from "~/interactions/guards";
-import { buildRoomPermissionOverwrites, fetchModeratorRoleIds, getModalComponent, replyEphemeral } from "~/interactions/helpers";
+import { buildRoomPermissionOverwrites, getModalComponent, replyEphemeral } from "~/interactions/helpers";
 import type { InteractionCtx } from "~/interactions/router";
 
 export async function handleRoomMembersModal(ctx: InteractionCtx) {
@@ -44,7 +44,6 @@ export async function handleRoomMembersModal(ctx: InteractionCtx) {
   }
 
   const config = db.serverConfigs.get(guildId, true);
-  const moderatorRoleIds = config.voice.promoteServerMods ? await fetchModeratorRoleIds(api, guildId) : [];
 
   const permissionOverwrites = buildRoomPermissionOverwrites(
     guildId,
@@ -53,7 +52,6 @@ export async function handleRoomMembersModal(ctx: InteractionCtx) {
     moderatorIds,
     whitelistIds,
     blacklistIds,
-    moderatorRoleIds,
     config.voice.categoryPermissionSync,
   );
 

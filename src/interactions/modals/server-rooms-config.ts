@@ -1,5 +1,5 @@
 import { MessageFlags, PermissionFlagsBits } from "discord-api-types/v10";
-import { getModalComponent, hasPermission } from "~/interactions/helpers";
+import { hasPermission } from "~/interactions/helpers";
 import type { ModalCtx } from "~/interactions/router";
 import { parseComponents } from "~/utils/modal";
 import { ROOM_MODAL_COMPONENTS } from "~/interactions/commands/settings/room";
@@ -10,11 +10,8 @@ export async function handleServerRoomsConfigModal(ctx: ModalCtx) {
   const comps = interaction.data.components;
   const parsed = parseComponents(ROOM_MODAL_COMPONENTS, comps);
 
-  const triggerChannelId = parsed.room_channel[0] ?? null;
-  const categories: string[] = getModalComponent(comps, "room_categories")?.values ?? [];
-  const nameTemplate = parsed.room_name_template.trim() || "{username}";
-  const categoryPermissionSync = parsed.room_category_sync;
-  const promoteServerMods = parsed.server_mods_as_room_mods;
+  const triggerChannelId = parsed.triggerChannelId[0] ?? null;
+  const nameTemplate = parsed.nameTemplate.trim() || "{username}";
 
   const prevConfig = db.serverConfigs.get(guildId, true);
   const voiceRoomChanged = triggerChannelId !== prevConfig.voice.triggerChannelId;
@@ -30,22 +27,23 @@ export async function handleServerRoomsConfigModal(ctx: ModalCtx) {
     return;
   }
 
+  console.log("parsed", parsed);
+
   await db.serverConfigs.put(guildId, {
     ...prevConfig,
-    voice: { ...prevConfig.voice, triggerChannelId, nameTemplate, categories, categoryPermissionSync, promoteServerMods },
+    voice: { ...prevConfig.voice, enabled: parsed.enabled, triggerChannelId, nameTemplate, categories: parsed.categories, categoryPermissionSync: parsed.categoryPermissionSync },
   });
 
-  const categoriesText = categories.length > 0 ? categories.map((id) => `<#${id}>`).join(", ") : "*(Не заданы)*";
-  const templateText = nameTemplate !== "{username}" ? `\`${nameTemplate}\`` : "*(По умолчанию)*";
+  const categoriesText = parsed.categories.length ? parsed.categories.map((id) => `<#${id}>`).join(", ") : "*(Не заданы)*";
 
   await api.interactions.reply(interaction.id, interaction.token, {
     content: [
       "Настройки голосовых комнат обновлены",
+      `-# - Статус: ${parsed.enabled ? "Включена" : "Выключена"}`,
       `-# - Голосовой канал для создания комнат: ${triggerChannelId ? `<#${triggerChannelId}>` : "*(Не задан)*"}`,
       `-# - Категории комнат: ${categoriesText}`,
-      `-# - Шаблон имени комнаты: ${templateText}`,
-      `-# - Синхронизация с категорией: ${categoryPermissionSync ? "Включена" : "Выключена"}`,
-      `-# - Модераторы сервера как модераторы комнат: ${promoteServerMods ? "Включено" : "Выключено"}`,
+      `-# - Шаблон имени комнаты: \`${nameTemplate}\``,
+      `-# - Синхронизация с категорией: ${parsed.categoryPermissionSync ? "Включена" : "Выключена"}`,
     ].join("\n"),
     allowed_mentions: {},
     flags: MessageFlags.Ephemeral,

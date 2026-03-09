@@ -1,5 +1,4 @@
 import { ChannelType, GatewayDispatchEvents, PermissionFlagsBits } from "discord-api-types/v10";
-import { fetchModeratorRoleIds } from "~/interactions/helpers";
 import { EventHandler } from "~/core/types";
 import { VoiceTemporaryRoomAccessMode } from "~/db";
 
@@ -56,27 +55,31 @@ const handler: EventHandler<GatewayDispatchEvents.VoiceStateUpdate, "db"> = {
 
       const targetParentId = await resolveTargetCategory(api, guildId, config.voice.triggerChannelId, config.voice.categories);
 
-      const categoryOverwrites =
-        config.voice.categoryPermissionSync && targetParentId
-          ? (((await api.channels.get(targetParentId).catch(() => null)) as any)?.permission_overwrites ?? [])
-          : [];
-
-      const superUserPerms = (PermissionFlagsBits.Connect | PermissionFlagsBits.ViewChannel).toString();
-
-      const moderatorRoleIds = config.voice.promoteServerMods ? await fetchModeratorRoleIds(api, guildId) : [];
-      const modRoleOverwrites = moderatorRoleIds.map((id) => ({
-        id,
-        type: 0,
-        allow: superUserPerms,
-        deny: "0",
-      }));
+      const initialPermissions = [
+        {
+          id: userId,
+          type: 1,
+          allow: (PermissionFlagsBits.Connect | PermissionFlagsBits.ViewChannel).toString(),
+          deny: "0",
+        }
+      ]
 
       const newChannel = await api.guilds.createChannel(guildId, {
         name: roomName,
         type: ChannelType.GuildVoice,
-        ...(targetParentId ? { parent_id: targetParentId } : {}),
-        permission_overwrites: [...categoryOverwrites, ...modRoleOverwrites, { id: userId, type: 1, allow: superUserPerms, deny: "0" }],
+        ...(targetParentId ? { parent_id: targetParentId } : { permission_overwrites: initialPermissions })
       });
+
+      if (targetParentId) {
+        const allChannels = await api.guilds.getChannels(guildId).catch(() => []);
+        const category = allChannels.find(ch => ch.id === targetParentId);
+
+        if (category && category.permission_overwrites) {
+          await api.channels.edit(newChannel.id, {
+            permission_overwrites: [...category.permission_overwrites, ...initialPermissions]
+          });
+        }
+      }
 
       await db.voiceTemporaryRooms.put(newChannel.id, {
         guildId: guildId,
@@ -106,9 +109,9 @@ const handler: EventHandler<GatewayDispatchEvents.VoiceStateUpdate, "db"> = {
  * 2. Falls back to the creation channel's own category if no categories configured
  */
 async function resolveTargetCategory(api: any, guildId: string, creationChannelId: string, categoryIds: string[]): Promise<string | null | undefined> {
+  const allChannels = await api.guilds.getChannels(guildId).catch(() => []);
 
   if (categoryIds.length > 0) {
-    const allChannels: any[] = await api.guilds.getChannels(guildId).catch(() => []);
     const countByCategory = new Map<string, number>();
     for (const ch of allChannels) {
       const parentId = ch.parent_id as string | null | undefined;
@@ -126,8 +129,8 @@ async function resolveTargetCategory(api: any, guildId: string, creationChannelI
     return categoryIds.at(-1);
   }
 
-  const creationChannel = await api.channels.get(creationChannelId).catch(() => null);
-  return creationChannel?.parent_id as string | null | undefined;
+  const creationChannel = allChannels.find(ch => ch.id === creationChannelId);
+  return creationChannel?.parent_id;
 }
 
 export default handler;

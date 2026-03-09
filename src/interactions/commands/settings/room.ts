@@ -10,11 +10,19 @@ import { createComponents } from "~/utils/modal";
 export const ROOM_MODAL_COMPONENTS = [
   {
     type: ComponentType.Label,
+    label: "Включить",
+    component: {
+      type: ComponentType.Checkbox,
+      custom_id: "enabled",
+    },
+  },
+  {
+    type: ComponentType.Label,
     label: "Голосовой канал",
     description: "Канал для создания временных комнат",
     component: {
       type: ComponentType.ChannelSelect,
-      custom_id: "room_channel",
+      custom_id: "triggerChannelId",
       min_values: 0,
       max_values: 1,
       channel_types: [ChannelType.GuildVoice],
@@ -27,7 +35,7 @@ export const ROOM_MODAL_COMPONENTS = [
     description: "Категории для временных комнат по приоритету (если категория заполнена — следующая)",
     component: {
       type: ComponentType.ChannelSelect,
-      custom_id: "room_categories",
+      custom_id: "categories",
       min_values: 0,
       max_values: 10,
       channel_types: [ChannelType.GuildCategory],
@@ -39,7 +47,7 @@ export const ROOM_MODAL_COMPONENTS = [
     label: "Шаблон имени комнаты",
     component: {
       type: ComponentType.TextInput,
-      custom_id: "room_name_template",
+      custom_id: "nameTemplate",
       style: TextInputStyle.Short,
       placeholder: "{username}",
       required: false,
@@ -52,18 +60,9 @@ export const ROOM_MODAL_COMPONENTS = [
     description: "Комнаты наследуют права доступа из родительской категории",
     component: {
       type: ComponentType.Checkbox,
-      custom_id: "room_category_sync",
+      custom_id: "categoryPermissionSync",
     },
-  },
-  {
-    type: ComponentType.Label,
-    label: "Модераторы сервера — модераторы комнат",
-    description: "Роли с правами ManageChannels/MoveMembers получают доступ ко всем комнатам",
-    component: {
-      type: ComponentType.Checkbox,
-      custom_id: "server_mods_as_room_mods",
-    },
-  },
+  }
 ] as const satisfies readonly APILabelComponent[];
 
 export async function handleServerSettingsRoomCommand(ctx: CommandCtx) {
@@ -75,11 +74,11 @@ export async function handleServerSettingsRoomCommand(ctx: CommandCtx) {
     title: "Настройки голосовых комнат",
     custom_id: "server-rooms-config-modal",
     components: createComponents(ROOM_MODAL_COMPONENTS, {
-      room_channel: config.voice.triggerChannelId ? [config.voice.triggerChannelId] : [],
-      room_categories: config.voice.categories,
-      room_name_template: config.voice.nameTemplate,
-      room_category_sync: config.voice.categoryPermissionSync,
-      server_mods_as_room_mods: config.voice.promoteServerMods,
+      enabled: config.voice.enabled,
+      triggerChannelId: config.voice.triggerChannelId ? [config.voice.triggerChannelId] : [],
+      categories: config.voice.categories,
+      nameTemplate: config.voice.nameTemplate,
+      categoryPermissionSync: config.voice.categoryPermissionSync,
     }),
   });
 }
