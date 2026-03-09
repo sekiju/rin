@@ -31,7 +31,7 @@ export async function handleRoomConfigModal(ctx: InteractionCtx) {
   const whitelistIds = await db.getVoiceTemporaryRoomWhitelist(channelId);
   const blacklistIds = await db.getVoiceTemporaryRoomBlacklist(channelId);
 
-  const config = await db.getConfig(guildId);
+  const config = db.serverConfigs.get(guildId);
   const moderatorRoleIds = config?.server_mods_as_room_mods ? await fetchModeratorRoleIds(api, guildId) : [];
 
   const permissionOverwrites = buildRoomPermissionOverwrites(

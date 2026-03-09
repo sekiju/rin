@@ -20,7 +20,7 @@ export const EXPERIMENTS_MODAL_COMPONENTS = [
 export async function handleServerSettingsExperimentsCommand(ctx: CommandCtx) {
   const { interaction, guildId, api, db } = ctx;
 
-  let config = await db.getConfig(guildId);
+  let config = db.serverConfigs.get(guildId);
   config ||= {
     guild_id: guildId,
     room_channel_id: null,

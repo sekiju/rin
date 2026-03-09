@@ -17,7 +17,7 @@ const handler: EventHandler<GatewayDispatchEvents.VoiceStateUpdate, "db"> = {
     const guildId = data.guild_id;
     if (!guildId) return;
 
-    const config = await db.getConfig(guildId);
+    const config = db.serverConfigs.get(guildId);
     if (!config?.room_channel_id) return;
 
     const userId = data.user_id;
@@ -92,7 +92,7 @@ const handler: EventHandler<GatewayDispatchEvents.VoiceStateUpdate, "db"> = {
  * 2. Falls back to the creation channel's own category if no categories configured
  */
 async function resolveTargetCategory(api: any, guildId: string, creationChannelId: string, db: any): Promise<string | null | undefined> {
-  const categoryIds: string[] = await db.getServerConfigCategories(guildId);
+  const categoryIds: string[] = db.serverConfigCategories.get(guildId) ?? [];
 
   if (categoryIds.length > 0) {
     const allChannels: any[] = await api.guilds.getChannels(guildId).catch(() => []);

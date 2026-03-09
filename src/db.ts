@@ -24,7 +24,7 @@ export const serverConfigs = new VersionedStore<ServerConfig>({
 });
 
 /** Per-guild ordered list of category IDs for temporary room placement. */
-const serverConfigCategories = root.openDB<string[], string>({ name: "server-config-categories" });
+export const serverConfigCategories = root.openDB<string[], string>({ name: "server-config-categories" });
 
 export type VoiceTemporaryRoomAccessMode = "open" | "locked" | "hidden";
 
@@ -136,35 +136,6 @@ export async function initDb() {
   if (!root.get(SQLITE_MIGRATION_KEY)) {
     await migrateFromSqlite();
     await root.put(SQLITE_MIGRATION_KEY, true);
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Server config
-// ---------------------------------------------------------------------------
-
-export async function getConfig(guildId: string): Promise<ServerConfig | null> {
-  return serverConfigs.get(guildId) ?? null;
-}
-
-export async function setConfig(config: ServerConfig) {
-  await serverConfigs.put(config.guild_id, config);
-}
-
-export async function deleteConfig(guildId: string) {
-  await serverConfigs.remove(guildId);
-  await serverConfigCategories.remove(guildId);
-}
-
-export async function getServerConfigCategories(guildId: string): Promise<string[]> {
-  return serverConfigCategories.get(guildId) ?? [];
-}
-
-export async function setServerConfigCategories(guildId: string, categoryIds: string[]) {
-  if (categoryIds.length === 0) {
-    await serverConfigCategories.remove(guildId);
-  } else {
-    await serverConfigCategories.put(guildId, categoryIds);
   }
 }
 

@@ -5,14 +5,13 @@ const handler: EventHandler<GatewayDispatchEvents.GuildCreate, "db"> = {
   event: GatewayDispatchEvents.GuildCreate,
   services: ["db"],
   handler: async ({ data: guild, db }) => {
-    let config = await db.getConfig(guild.id);
+    const config = db.serverConfigs.get(guild.id);
     if (!config) return;
 
     if (config.room_channel_id) {
       const exists = guild.channels.some((c) => c.id === config.room_channel_id);
       if (!exists) {
-        config.room_channel_id = null;
-        await db.setConfig(config);
+        await db.serverConfigs.put(guild.id, { ...config, room_channel_id: null });
       }
     }
   },

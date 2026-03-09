@@ -14,8 +14,8 @@ export async function handleServerExperimentsConfigModal(ctx: ModalCtx) {
     experiment_keyboard_layout_fix: parsed.experiments.some((v) => v === "experiment_keyboard_layout_fix"),
   };
 
-  const prevConfig = await db.getConfig(guildId);
-  await db.setConfig({ ...prevConfig, ...newConfig });
+  const prevConfig = db.serverConfigs.get(guildId);
+  await db.serverConfigs.put(guildId, { ...prevConfig, ...newConfig } as ServerConfig);
 
   await api.interactions.reply(interaction.id, interaction.token, {
     content: [

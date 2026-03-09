@@ -70,7 +70,7 @@ export const ROOM_MODAL_COMPONENTS = [
 export async function handleServerSettingsRoomCommand(ctx: CommandCtx) {
   const { interaction, guildId, api, db } = ctx;
 
-  let config = await db.getConfig(guildId);
+  let config = db.serverConfigs.get(guildId);
   config ||= {
     guild_id: guildId,
     room_channel_id: null,
@@ -80,7 +80,7 @@ export async function handleServerSettingsRoomCommand(ctx: CommandCtx) {
     experiment_keyboard_layout_fix: false,
   };
 
-  const categoryIds = await db.getServerConfigCategories(guildId);
+  const categoryIds = db.serverConfigCategories.get(guildId) ?? [];
 
   await api.interactions.createModal(interaction.id, interaction.token, {
     title: "Настройки голосовых комнат",

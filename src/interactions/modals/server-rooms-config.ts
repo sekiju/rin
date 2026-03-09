@@ -21,7 +21,7 @@ export async function handleServerRoomsConfigModal(ctx: ModalCtx) {
   };
   const newCategoryIds: string[] = getModalComponent(comps, "room_categories")?.values ?? [];
 
-  const prevConfig = await db.getConfig(guildId);
+  const prevConfig = db.serverConfigs.get(guildId);
   const voiceRoomChanged = newConfig.room_channel_id !== prevConfig?.room_channel_id;
 
   const resolvedChannel = interaction.data.resolved?.channels?.[newConfig.room_channel_id];
@@ -35,8 +35,12 @@ export async function handleServerRoomsConfigModal(ctx: ModalCtx) {
     return;
   }
 
-  await db.setConfig({ ...prevConfig, ...newConfig });
-  await db.setServerConfigCategories(guildId, newCategoryIds);
+  await db.serverConfigs.put(guildId, { ...prevConfig, ...newConfig } as ServerConfig);
+  if (newCategoryIds.length === 0) {
+    await db.serverConfigCategories.remove(guildId);
+  } else {
+    await db.serverConfigCategories.put(guildId, newCategoryIds);
+  }
 
   const categoriesText = newCategoryIds.length > 0 ? newCategoryIds.map((id) => `<#${id}>`).join(", ") : "*(Не заданы)*";
   const templateText = newConfig.room_name_template ? `\`${newConfig.room_name_template}\`` : "*(По умолчанию)*";

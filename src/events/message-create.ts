@@ -24,7 +24,7 @@ const handler: EventHandler<GatewayDispatchEvents.MessageCreate, "db"> = {
   handler: async ({ data: message, api, db }) => {
     if (message.author.bot || !message.guild_id || !message.content) return;
 
-    const config = await db.getConfig(message.guild_id);
+    const config = db.serverConfigs.get(message.guild_id);
     if (!config?.experiment_keyboard_layout_fix) return;
 
     if (isProbablyWrongLayout(message.content)) {
